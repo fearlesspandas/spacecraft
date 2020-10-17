@@ -1,0 +1,46 @@
+name: spacecraft
+main: minecraft.SpaceCraft
+version: 1.0
+author: land00000
+commands:
+    setfreq:
+       description: sets the frequency of event rolls.
+       usage: /<command>
+       permission: spacecraft.setfreq
+       permission-message: You don't have <permission>
+    setprob:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.setprob
+      permission-message: You don't have <permission>
+    disablespc:
+      description: disables spacecraft events.
+      usage: /<command>
+      permission: spacecraft.disablespc
+      permission-message: You don't have <permission>
+    disableEvent:
+      description: disables spacecraft events.
+      usage: /<command>
+      permission: spacecraft.disableEvent
+      permission-message: You don't have <permission>
+    enableEvent:
+      description: enable spacecraft events.
+      usage: /<command>
+      permission: spacecraft.enableEvent
+      permission-message: You don't have <permission>
+    setcmd:
+      description: binds command to held item
+      usage: /<command>
+      permission: spacecraft.setcmd
+      permission-message: You don't have <permission>
+    readprob:
+      description: shows probability of event
+      usage: /<command>
+      permission: spacecraft.readprob
+      permission-message: You don't have <permission>
+    readfreq:
+      description: shows frequency of event
+      usage: /<command>
+      permission: spacecraft.readfreq
+      permission-message: You don't have <permission>
+
