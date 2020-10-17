@@ -1,12 +1,14 @@
 package events
 import events.EventLoop.{runFromTimer, shouldRun}
 import minecraft.IO.SettingsDecoder
-import minecraft.runnables.{PhantomRunnable, RocketCharge}
+import minecraft.runnables._
 import net.md_5.bungee.api.chat.ClickEvent
 import org.bukkit.{Bukkit, Material}
 import org.bukkit.entity.Player
+import org.bukkit.event.block.Action
+import org.bukkit.event.entity.EntityAirChangeEvent
 import org.bukkit.event.player.{PlayerInteractEntityEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerToggleFlightEvent}
-import org.bukkit.event.{EventHandler, Listener}
+import org.bukkit.event.{EventHandler, EventPriority, Listener}
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 object EventLoop {
@@ -25,7 +27,8 @@ class EventLoopListener(plug:JavaPlugin) extends Listener {
 
   val runnerMap:Map[Events.Events,Player => BukkitRunnable] = Map(
     Events.PhantomEvent -> (PhantomRunnable(_:Player)),
-    Events.RocketChargeEvent -> (RocketCharge(_:Player))
+    Events.RocketChargeEvent -> (RocketCharge(_:Player)),
+    Events.OxygenDiminishEvent -> (OxygenHandler(_:Player))
   )
   @EventHandler
   def onPlayerJoin(event:PlayerJoinEvent):Unit = {
@@ -41,15 +44,16 @@ class EventLoopListener(plug:JavaPlugin) extends Listener {
       player.performCommand(cmd)
     }
   }
-  @EventHandler
-  def onInteractEntity(event:PlayerInteractEntityEvent):Unit = {
-    event.getPlayer.sendMessage(s"clicked on ${event.getRightClicked}")
+  @EventHandler(priority = EventPriority.HIGH)
+  def oxygenReplenish(event:PlayerInteractEvent): Unit = if (event.getClickedBlock.getType == Material.BLUE_ICE && event.getAction ==Action.RIGHT_CLICK_BLOCK){
+    OxygenHandler.oxygenMap.update(event.getPlayer.getUniqueId,OxygenHandler.oxygenMap.getOrElse(event.getPlayer.getUniqueId,0)+3)
+    event.getPlayer.sendMessage(s"${OxygenHandler.oxygenMap(event.getPlayer.getUniqueId)} O2 pods remaining")
+    event.getClickedBlock.breakNaturally()
   }
-
 }
 
 object Events extends Enumeration{
   type Events = Value
-  val PhantomEvent,RocketChargeEvent = Value
+  val PhantomEvent,RocketChargeEvent,OxygenDiminishEvent = Value
 }
 

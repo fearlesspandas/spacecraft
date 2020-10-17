@@ -1,6 +1,7 @@
 package minecraft;
 
 import events.{EventLoop, EventLoopListener, Events}
+import minecraft.runnables.OxygenHandler
 import org.bukkit.Material
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Player
@@ -60,6 +61,12 @@ class SpaceCraft extends JavaPlugin{
 			 EventLoop.probabilityMap.update(eventType,newvalue)
 			 sender.sendMessage(s"Set $eventType frequency to ${EventLoop.probabilityMap.getOrElse(eventType,0l).toString}")
 			 true
+		 case "setoxygen" =>
+			 sender match {
+				 case player:Player if args.size > 0 =>
+					 OxygenHandler.oxygenMap.update(player.getUniqueId,args(0).toInt)
+					 true
+			 }
 		 case "readfreq" =>
 			 val eventName = args(0)
 			 val eventType = Events.withName(eventName)
