@@ -6,7 +6,7 @@ import org.bukkit.Material
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-
+import scala.collection.JavaConverters._
 
 
 object SpaceCraft{
@@ -35,15 +35,52 @@ class SpaceCraft extends JavaPlugin{
 //    }
 	}
 
-//  override def onTabComplete(sender : CommandSender, cmd : Command, label : String, args : Array[String]) : java.util.List[String] = {
-//		val res = cmd.getName() match {
-//			case "setfreq" =>
-//				args.size match {
-//					case 0 =>
-//				}
-//  	}
-//		//(new java.util.ArrayList()).add()
-//	}
+  override def onTabComplete(sender : CommandSender, cmd : Command, label : String, args : Array[String]) : java.util.List[String] = {
+		cmd.getName() match {
+			case "setfreq" =>
+				args.size match {
+					case 1 => Events.values.map(_.toString).filter(_.contains(args(0))).toList.asJava
+					case 2 => List("num_ticks > 0").asJava
+					case _ => List().asJava
+				}
+			case "setprob" =>
+				args.size match {
+					case 1 => Events.values.map(_.toString).filter(_.contains(args(0))).toList.asJava
+					case 2 => List("0< probability <1").asJava
+					case _ => List().asJava
+				}
+			case "setoxygen" =>
+				args.size match {
+					case 1 => List("num > 0").asJava
+					case _ => List().asJava
+				}
+			case "readfreq" =>
+				args.size match {
+					case 1 => Events.values.map(_.toString).filter(_.contains(args(0))).toList.asJava
+					case _ => List().asJava
+				}
+			case "readprob" =>
+				args.size match {
+					case 1 => Events.values.map(_.toString).filter(_.contains(args(0))).toList.asJava
+					case _ => List().asJava
+				}
+			case "disableEvent" =>
+				args.size match {
+					case 1 => Events.values.map(_.toString).filter(_.contains(args(0))).toList.asJava
+					case _ => List().asJava
+				}
+			case "enableEvent" =>
+				args.size match {
+					case 1 => Events.values.map(_.toString).filter(_.contains(args(0))).toList.asJava
+					case _ => List().asJava
+				}
+			case "setcmd" =>
+				args.size match {
+					case 1 => List("[command]").asJava
+					case _ => List().asJava
+				}
+  	}
+	}
 
 	override def onCommand(sender : CommandSender, cmd : Command, label : String, args : Array[String]):Boolean = {
    cmd.getName() match {
@@ -65,6 +102,7 @@ class SpaceCraft extends JavaPlugin{
 			 sender match {
 				 case player:Player if args.size > 0 =>
 					 OxygenHandler.oxygenMap.update(player.getUniqueId,args(0).toInt)
+					 player.sendMessage(s"Oxygen set to ${OxygenHandler.oxygenMap(player.getUniqueId)}")
 					 true
 			 }
 		 case "readfreq" =>

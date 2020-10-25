@@ -1,4 +1,5 @@
 {
   "PhantomEvent": 1,
-  "RocketChargeEvent": 1
+  "RocketChargeEvent": 1,
+  "OxygenDiminishEvent": 1
 }

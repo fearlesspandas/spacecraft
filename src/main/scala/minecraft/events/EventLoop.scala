@@ -3,10 +3,10 @@ import events.EventLoop.{runFromTimer, shouldRun}
 import minecraft.IO.SettingsDecoder
 import minecraft.runnables._
 import net.md_5.bungee.api.chat.ClickEvent
-import org.bukkit.{Bukkit, Material}
+import org.bukkit.{Bukkit, ChatColor, Material}
 import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
-import org.bukkit.event.entity.EntityAirChangeEvent
+import org.bukkit.event.entity.{EntityAirChangeEvent, EntityDamageByEntityEvent, EntityDamageEvent, EntityDeathEvent}
 import org.bukkit.event.player.{PlayerInteractEntityEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerToggleFlightEvent}
 import org.bukkit.event.{EventHandler, EventPriority, Listener}
 import org.bukkit.plugin.java.JavaPlugin
@@ -44,11 +44,34 @@ class EventLoopListener(plug:JavaPlugin) extends Listener {
       player.performCommand(cmd)
     }
   }
+  @EventHandler(priority = EventPriority.LOW)
+  def rocketExp(event:PlayerInteractEvent):Unit = if(
+    event.getItem!= null &&
+      event.getItem.getType == Material.FIREWORK_ROCKET && event.getAction == Action.RIGHT_CLICK_AIR
+  ){
+    event.getPlayer.giveExp(1)
+  }
   @EventHandler(priority = EventPriority.HIGH)
-  def oxygenReplenish(event:PlayerInteractEvent): Unit = if (event.getClickedBlock.getType == Material.BLUE_ICE && event.getAction ==Action.RIGHT_CLICK_BLOCK){
-    OxygenHandler.oxygenMap.update(event.getPlayer.getUniqueId,OxygenHandler.oxygenMap.getOrElse(event.getPlayer.getUniqueId,0)+3)
-    event.getPlayer.sendMessage(s"${OxygenHandler.oxygenMap(event.getPlayer.getUniqueId)} O2 pods remaining")
+  def oxygenReplenish(event:PlayerInteractEvent): Unit = if (
+    OxygenHandler.oxyconverters.contains(event.getClickedBlock.getType) &&
+      event.getAction == Action.RIGHT_CLICK_BLOCK
+  ){
+    OxygenHandler
+      .update(
+        event.getPlayer,
+        OxygenHandler
+          .getOrElse(event.getPlayer,0)+OxygenHandler.SIPHON_AMT
+      )
+    event.getPlayer.sendMessage(s"${ChatColor.GREEN} + ${OxygenHandler.SIPHON_AMT} oxy")
     event.getClickedBlock.breakNaturally()
+  }
+  @EventHandler
+  def oxygenOnDamage(event:EntityDamageByEntityEvent):Unit = {
+    event.getDamager match {
+      case player:Player =>
+        player.sendMessage(s"${ChatColor.GREEN} +1 oxy")
+        OxygenHandler.update(player,OxygenHandler.get(player) + 1)
+    }
   }
 }
 

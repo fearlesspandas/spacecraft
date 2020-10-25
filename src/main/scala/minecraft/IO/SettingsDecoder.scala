@@ -11,7 +11,7 @@ object SettingsDecoder {
   def processString(str:String) = str
     .split(":").map(substr =>
     substr.filterNot(_ == ",")
-    .filter(_.isLetterOrDigit)
+    .filter(c => c.isLetterOrDigit  || c == ".")
   )
 
 
@@ -35,6 +35,11 @@ object SettingsDecoder {
         val pair = processString(str)
         if(pair.size == 2) Map[Events.Events,Long](Events.withName(pair(0)) -> pair(1).toLong) else Map.empty[Events.Events,Long]
     }))
+  }
+  def writeMap[A,B](m:Map[A,B]):String = {
+    "{\n" +
+      m.toSeq.map(p => s"${p._1} : ${p._2},\n").foldLeft("")(_ + _) +
+    "}"
   }
 
 //  def main(args: Array[String]): Unit = {
