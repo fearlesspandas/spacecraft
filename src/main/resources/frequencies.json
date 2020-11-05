@@ -1,0 +1,5 @@
+{
+  "SpawnEvent":500,
+  "RocketChargeEvent":500,
+  "OxygenDiminishEvent":500
+}

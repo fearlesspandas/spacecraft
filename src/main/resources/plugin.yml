@@ -49,4 +49,28 @@ commands:
       usage: /<command>
       permission: spacecraft.readfreq
       permission-message: You don't have <permission>
+    spawnevent_theme:
+      description: shows frequency of event
+      usage: /<command>
+      permission: spacecraft.spawnevent_theme
+      permission-message: You don't have <permission>
+    spawnevent_random:
+      description: shows frequency of event
+      usage: /<command>
+      permission: spacecraft.spawnevent_random
+    addloot:
+      description: shows frequency of event
+      usage: /<command>
+      permission: spacecraft.addloot
+      permission-message: You don't have <permission>
+    setgravity:
+      description: shows frequency of event
+      usage: /<command>
+      permission: spacecraft.setgravity
+      permission-message: You don't have <permission>
+    runevent:
+      description: shows frequency of event
+      usage: /<command>
+      permission: spacecraft.runevent
+      permission-message: You don't have <permission>
 

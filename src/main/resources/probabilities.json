@@ -1,5 +1,5 @@
 {
-  "PhantomEvent": 1,
-  "RocketChargeEvent": 1,
-  "OxygenDiminishEvent": 1
+  "SpawnEvent":0.2,
+  "RocketChargeEvent":1,
+  "OxygenDiminishEvent":1
 }

@@ -15,6 +15,6 @@ class RocketCharge(override val player:Player) extends SpaceCraftRunnable {
   }
 }
 
-object RocketCharge{
+object RocketCharge extends RunnableCompanion [RocketCharge]{
   def apply(player: Player) = new RocketCharge(player)
 }
