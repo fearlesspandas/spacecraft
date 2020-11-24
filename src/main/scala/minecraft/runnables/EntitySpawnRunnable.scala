@@ -73,9 +73,30 @@ object EntitySpawnRunnable extends RunnableCompanion[EntitySpawnRunnable] {
 
   def apply(player:Player) = new EntitySpawnRunnable(player)
 
-//  val buildOutCommandProcessor : CommandProcessor = (sender,cmd,_,args) => cmd.getName match{
-//    case ""
-//  }
+  val buildOutCommandProcessor : CommandProcessor = (sender,cmd,_,args) => cmd.getName match{
+    case "buildout" => args match {
+      case args if args.size > 2 =>
+        val rad = args(0).toInt
+        val mat = Material.getMaterial(args(1).toUpperCase)
+        val maxdistance = (args.size match {
+          case 3 => Some(args(2).toInt)
+          case _ => None
+        }).getOrElse(Int.MaxValue)
+        val player = sender match {case p:Player => p}
+        val target = player.getTargetBlock(Set(Material.AIR).asJava,maxdistance)
+        buildRecursive(Seq(target),rad,mat)
+        true
+    }
+    case _ => true
+  }
+  val buildOutTabComplete: TabComplete = (sender,cmd,_,args) => cmd.getName match{
+    case "buildout" => args.size match {
+      case 1 => List("radius:Int")
+      case 2 => Material.values().filter(_.toString.contains(args(1).toUpperCase())).map(_.toString).toList
+      case 3 => List("MaxDistance:Int-Optional")
+    }
+    case _ => List()
+  }
   case class genInfo(lastgen:Seq[Block],total:HashSet[Location])
   def buildRecursive(locations:Seq[Block], num:Int, mat:Material):Unit = {
     (0 until num).foldLeft(genInfo(locations,HashSet()))((info, _) => {

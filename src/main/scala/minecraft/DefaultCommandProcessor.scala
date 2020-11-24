@@ -14,14 +14,14 @@ object DefaultCommandProcessor {
       val eventType = Events.withName(eventName)
       val newvalue = args(1).toInt
       EventLoop.frequencyMap.update(eventType,newvalue)
-      sender.sendMessage(s"Set $eventType probability to ${EventLoop.frequencyMap.getOrElse(eventType,0l).toString} (this requires a restart to take effect)")
+      sender.sendMessage(s"Set $eventType frequency to ${EventLoop.frequencyMap.getOrElse(eventType,0l).toString} (this requires a restart to take effect)")
       true
     case "setprob" =>
       val eventName = args(0)
       val eventType = Events.withName(eventName)
       val newvalue = args(1).toDouble
       EventLoop.probabilityMap.update(eventType,newvalue)
-      sender.sendMessage(s"Set $eventType frequency to ${EventLoop.probabilityMap.getOrElse(eventType,0l).toString}")
+      sender.sendMessage(s"Set $eventType probability to ${EventLoop.probabilityMap.getOrElse(eventType,0l).toString}")
       true
     case "readfreq" =>
       val eventName = args(0)
