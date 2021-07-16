@@ -5,6 +5,9 @@ import minecraft.runnables.SpaceCraftRunnable.{CommandProcessor, TabComplete}
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitRunnable
+import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+import scala.io.Source
+
 
 object SpaceCraftRunnable{
   type CommandProcessor = (CommandSender,Command,String, Array[String]) => Boolean
@@ -16,7 +19,9 @@ trait RunnableCompanion[A<:SpaceCraftRunnable] {
   val tabComplete:TabComplete =  (sender,cmd,label,args)=>apply(sender.asInstanceOf[Player]).tabComplete(sender,cmd,label,args)
 }
 trait SpaceCraftRunnable extends BukkitRunnable{
-
+//  type Settings
+//  val settingsLoc : String
+//  val settingsDecoder = decode[Settings](Source.fromFile(settingsLoc).getLines().foldLeft("")(_ + _))
   val eventType:Events.Events
   val player:Player
   def runner():Unit

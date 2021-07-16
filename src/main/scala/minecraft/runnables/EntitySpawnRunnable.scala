@@ -18,13 +18,14 @@ class EntitySpawnRunnable(override val player:Player) extends SpaceCraftRunnable
   override val eventType = Events.SpawnEvent
 
   def runner(): Unit = if (player.isGliding) {
-    val entity: () => EntityType = () => EntitySpawnRunnable.entityPool((scala.math.random * EntitySpawnRunnable.entityPool.size).floor.toInt)
+    import EntitySpawnRunnable._
+    val entity: () => EntityType = () => entityPool((scala.math.random * entityPool.size).floor.toInt)
     //val loot = EntitySpawnRunnable.loot((scala.math.random * EntitySpawnRunnable.loot.size).floor.toInt)
-    val radius = EntitySpawnRunnable.MAX_LOOT_RADIUS
+    val radius = MAX_LOOT_RADIUS
     player.sendMessage(s"${ChatColor.DARK_GREEN} Monsters are Attacking!")
     val world = player.getWorld()
-    val centerblok = player.getTargetBlock(Set(Material.AIR).asJava, (scala.math.random * EntitySpawnRunnable.MAX_DIST).floor.toInt)
-    (0 until (EntitySpawnRunnable.MAX_SWARM * scala.math.random()).ceil.toInt).foreach(_ =>
+    val centerblok = player.getTargetBlock(Set(Material.AIR).asJava, (scala.math.random * MAX_DIST).floor.toInt)
+    (0 until (MAX_SWARM * scala.math.random()).ceil.toInt).foreach(_ =>
       world.spawnEntity(centerblok.getLocation().add(0,radius,0),entity())
     )
     val nummobs,lootnum,bossbatchsize = (random() * 4).toInt
@@ -105,6 +106,8 @@ object EntitySpawnRunnable extends RunnableCompanion[EntitySpawnRunnable] {
           .filterNot(block => info.total.exists(l => block.getLocation().distance(l) == 0))
       genInfo(nextgen,info.total ++ info.lastgen.map(_.getLocation()).toSet[Location])
     })
+
+
   }
 
   val randomSphereCommandProcessor:CommandProcessor = (sender,cmd,_,args) => cmd.getName match {

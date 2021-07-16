@@ -1,5 +1,6 @@
 {
   "SpawnEvent":0.2,
   "RocketChargeEvent":1,
-  "OxygenDiminishEvent":1
+  "OxygenDiminishEvent":1,
+  "TerrainEvent": 0.2
 }

@@ -55,11 +55,4 @@ class SpaceCraft extends JavaPlugin{
 		COMMAND_PROCESSORS.foldLeft(true)((res,processor) => try{res&& processor(sender,cmd,label,args)}catch{case _ => res})
 
 
-	trait args[+tpe <: (=> Thing)]
-	type RunYear = args[(Int,String)]
-	trait Thing
-	def f[A,U<:args[A],F<: A => Thing](func:F,a:A):Thing = {
-		func(a)
-	}
-
 }

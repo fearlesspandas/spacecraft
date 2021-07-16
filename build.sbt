@@ -13,6 +13,14 @@ libraryDependencies += "net.liftweb" %% "lift-json" % "3.4.1"
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-scala
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.11.0"
 
+libraryDependencies += "org.statefreak" %% "typical" % "1.0-SNAPSHOT"
+val circeVersion = "0.12.3"
+
+libraryDependencies ++= Seq(
+  "io.circe" %% "circe-core",
+  "io.circe" %% "circe-generic",
+  "io.circe" %% "circe-parser"
+).map(_ % circeVersion)
 
 assemblyMergeStrategy in assembly := {
   case "module-info.class" => MergeStrategy.discard

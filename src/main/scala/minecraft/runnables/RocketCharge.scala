@@ -13,6 +13,7 @@ class RocketCharge(override val player:Player) extends SpaceCraftRunnable {
       inventory.addItem(new ItemStack(Material.FIREWORK_ROCKET,1))
       player.sendMessage(s"${ChatColor.GRAY} +1 Rocket")
   }
+
 }
 
 object RocketCharge extends RunnableCompanion [RocketCharge]{
