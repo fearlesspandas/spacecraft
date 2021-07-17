@@ -1,6 +1,6 @@
 package minecraft;
 
-import events.{EventLoop, EventLoopListener, Events}
+import events.EventLoop._
 import minecraft.runnables.{EntitySpawnRunnable, OxygenHandler, RocketCharge, SpaceCraftRunnable}
 import org.bukkit.Material
 import org.bukkit.command.{Command, CommandSender}

@@ -2,8 +2,8 @@ package minecraft.runnables
 
 import java.util.UUID
 
-import events.Events
-import events.Events.Events
+import minecraft.events.EventLoop.Events._
+import minecraft.events.EventLoop._
 import minecraft.runnables.SpaceCraftRunnable.{CommandProcessor, TabComplete}
 import org.bukkit.{ChatColor, Material}
 import org.bukkit.entity.Player

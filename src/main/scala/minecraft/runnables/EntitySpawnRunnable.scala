@@ -1,7 +1,6 @@
 package minecraft.runnables
 
-import events.Events.Events
-import events.{EventLoop, Events}
+import minecraft.events.EventLoop._
 import minecraft.IO.SettingsDecoder
 import minecraft.runnables.EntitySpawnRunnable.buildRandomEvent
 import minecraft.runnables.SpaceCraftRunnable.{CommandProcessor, TabComplete}

@@ -1,0 +1,1 @@
+make bukkit runnable grammar that allows an encapsulated dataset to run as a task. Requires potential external source of truth, such as files or db. this is only required for when we need to commit source data back on cancellation of task, during execution state can be handled in memory

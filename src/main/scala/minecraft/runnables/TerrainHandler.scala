@@ -1,8 +1,9 @@
 package minecraft.runnables
-import events.Events
-import events.Events.Events
+import minecraft.events.EventLoop.Events.Events
+import minecraft.events.EventLoop._
 import org.bukkit.Material
 import org.bukkit.entity.Player
+
 import scala.collection.JavaConverters._
 class TerrainHandler(override val player: Player) extends SpaceCraftRunnable {
   override val eventType: Events = Events.TerrainEvent

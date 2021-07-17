@@ -1,7 +1,7 @@
 package minecraft.runnables
 
-import events.Events
-import events.Events.Events
+import minecraft.events.EventLoop._
+import minecraft.events.EventLoop.Events._
 import org.bukkit.{ChatColor, Material}
 import org.bukkit.entity.{Firework, Player}
 import org.bukkit.inventory.ItemStack
@@ -19,3 +19,5 @@ class RocketCharge(override val player:Player) extends SpaceCraftRunnable {
 object RocketCharge extends RunnableCompanion [RocketCharge]{
   def apply(player: Player) = new RocketCharge(player)
 }
+
+

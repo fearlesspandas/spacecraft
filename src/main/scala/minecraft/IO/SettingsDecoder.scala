@@ -1,18 +1,19 @@
 package minecraft.IO
 
-import events.Events
-import events.Events.Events
+import minecraft.events.EventLoop._
 import io.circe.Decoder.Result
 import org.bukkit.Material
 
 import scala.collection.mutable.Map
 import scala.io.Source
 import io.circe._
-import io.circe.generic.auto._
-import io.circe.generic.semiauto._
-import io.circe.parser._
-import io.circe.syntax._
+//import io.circe.generic.auto._
+//import io.circe.generic.semiauto._
+//import io.circe.parser._
+//import io.circe.syntax._
+import io.circe.generic.JsonCodec, io.circe.syntax._
 
+import minecraft.runnables.typicalModels.OxygenModel._
 object SettingsDecoder {
   val probfileloc = "plugins/spacecraft/probabilities.json"
   val freqfileloc = "plugins/spacecraft/frequencies.json"
@@ -70,24 +71,32 @@ object SettingsDecoder {
   }yield  config(event,prob)
 }
   case class config(event:Events.Events,prob:Double)
-  def read2(str:String) = {
-    val raw = Source.fromFile(str).getLines().toSeq.map( str => {
-      val json = parse(str).getOrElse(Json.Null)
-      json.as[config]
-    })
-      .map(r => r.right.get)
-    raw
-  }
+//  def read2(str:String) = {
+//    val raw = Source.fromFile(str).getLines().toSeq.map( str => {
+//      val json = parse(str).getOrElse(Json.Null)
+//      json.as[config]
+//    })
+//      .map(r => r.right.get)
+//    raw
+//  }
 
   def main(args: Array[String]): Unit = {
     val probfile = "src/main/resources/probabilities.json"
     val freqfile = "src/main/resources/frequencies.json"
     val res  = getProbSettings(probfile)
+    val testOxy =
+      """{
+        |"startingMax":100,
+        |"siphonAmt":10,
+        |"oxyConverters" : [],
+        |"breadthDelay":5
+        |}""".stripMargin
     //getFreqSettings(freqfile)
     //Events.withName("".removeSpecialChars("'SpawnEvent'"))
     //val res2 = read2(probfile)
    //readSettings2
     //res.foreach(println(_))
+    //println(OxygenDepletionModel(100,5,Seq(),10).asJson.as[OxygenDepletionModel].right.get.asJson)
     println(res)
     println(writeMap(res))
   }

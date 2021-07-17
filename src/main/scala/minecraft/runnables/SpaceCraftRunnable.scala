@@ -1,6 +1,6 @@
 package minecraft.runnables
 
-import events.{EventLoop, Events}
+import minecraft.events.EventLoop._
 import minecraft.runnables.SpaceCraftRunnable.{CommandProcessor, TabComplete}
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Player
@@ -25,7 +25,7 @@ trait SpaceCraftRunnable extends BukkitRunnable{
   val eventType:Events.Events
   val player:Player
   def runner():Unit
-  override def run(): Unit = try {if(EventLoop.shouldRun(eventType,player)) runner()}catch{
+  override def run(): Unit = try {if(shouldRun(eventType,player)) runner()}catch{
     case e:Exception =>
       println(s"$eventType event exception")
       e.printStackTrace()
@@ -38,7 +38,7 @@ trait SpaceCraftRunnable extends BukkitRunnable{
           val event = Events.withName(args.head)
           val player = sender match { case p:Player => p}
           event match {
-            case this.eventType => EventLoop.runnerMap(this.eventType)(player).run()
+            case this.eventType => runnerMap(this.eventType)(player).run()
           }
       }
       true

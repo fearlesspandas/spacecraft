@@ -1,17 +1,25 @@
-package events
-import events.EventLoop.{runFromTimer, shouldRun}
+package minecraft.events
 import minecraft.IO.SettingsDecoder
 import minecraft.runnables._
-import net.md_5.bungee.api.chat.ClickEvent
-import org.bukkit.{Bukkit, ChatColor, Material}
 import org.bukkit.entity.{Item, Player}
 import org.bukkit.event.block.Action
-import org.bukkit.event.entity.{EntityAirChangeEvent, EntityDamageByEntityEvent, EntityDamageEvent, EntityDeathEvent, EntitySpawnEvent}
-import org.bukkit.event.player.{PlayerDropItemEvent, PlayerInteractEntityEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerRespawnEvent, PlayerToggleFlightEvent}
+import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntitySpawnEvent}
+import org.bukkit.event.player.{PlayerDropItemEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerMoveEvent}
 import org.bukkit.event.{EventHandler, EventPriority, Listener}
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.{BukkitRunnable, BukkitTask}
+import org.bukkit.{ChatColor, Material}
+import Typical.core.dataset._
+import Typical.core.grammar._
+import minecraft.runnables.typicalModels.OxygenModel.OxygenDepletionModel
+import minecraft.runnables.typicalModels.PlayerEvents.{PlayerEvents, SpaceCraftPlayerEvent}
+import minecraft.runnables.typicalModels.Players.{Players, SpaceCraftPlayer}
+import org.bukkit.event.world.ChunkLoadEvent
+import minecraft.runnables.typicalModels.ListenerModel._
 object EventLoop {
+  type SpaceCraftDeps = OxygenHandler with Players with PlayerEvents with FrequencyMap with ProbabilityMap
+  var dat:dataset[SpaceCraftDeps] = data[SpaceCraftDeps]()
+
   type EventId = Int
   var disabled:Boolean = false
   val frequencyMap = SettingsDecoder.getFreqSettings(SettingsDecoder.freqfileloc)
@@ -25,98 +33,25 @@ object EventLoop {
     Events.RocketChargeEvent -> (RocketCharge(_:Player)),
     Events.OxygenDiminishEvent -> (OxygenHandler(_:Player))
   )
-}
+  class EventLoopListener(plug:JavaPlugin) extends Listener {
+    plug.getServer().getPluginManager().registerEvents(this,plug)
 
-class EventLoopListener(plug:JavaPlugin) extends Listener {
-  import EventLoop.runnerMap
-  plug.getServer().getPluginManager().registerEvents(this,plug)
+    val oxyModel = OxygenDepletionModel(1000,3,Seq(Material.BLUE_ICE),1000)
 
+    @EventHandler
+    def onPlayerJoin(event:PlayerJoinEvent):Unit = {
+     event.getPlayer.sendMessage("Welcome to space")
+      val t = data[SpaceCraftPlayer]().++(SpaceCraftPlayer(event.getPlayer,100)).++[SpaceCraftPlayerEvent,OxygenDepletionModel](oxyModel)
+      t.runTaskAsynchronously(plug)
+    }
+  }
 
-  @EventHandler
-  def onPlayerJoin(event:PlayerJoinEvent):Unit = {
-    Events.values.foreach(e => try {
-      runFromTimer(runnerMap(e)(event.getPlayer),plug,e)
-    }catch{
-      case err:Exception => println(s"Event ${e} Not yet implemented")
-    })
-  }
-  @EventHandler
-  def executeSavedComand(event:PlayerInteractEvent):Unit = try {
-    val player = event.getPlayer
-    val item = player.getInventory.getItemInMainHand
-    val cmd = EventLoop.cmdmap.getOrElse((item.getType,player),"")
-    if(cmd.size>0){
-      player.sendMessage(s"Executing: $cmd")
-      player.performCommand(cmd)
-    }
-  }catch {
-    case e:Exception =>
-      println(s"OnClick Exception ${event.getItem}")
-  }
-  @EventHandler(priority = EventPriority.LOW)
-  def rocketExp(event:PlayerInteractEvent):Unit = try{
-    if (
-      event.getItem != null &&
-        event.getItem.getType == Material.FIREWORK_ROCKET &&
-        event.getAction == Action.RIGHT_CLICK_AIR &&
-        event.getPlayer.isGliding
-    ) {
-      event.getPlayer.giveExp(1)
-    }
-  }catch{
-    case e:Exception =>
-      println(s"Rocket Exception")
-  }
-  @EventHandler(priority = EventPriority.HIGH)
-  def oxygenReplenish(event:PlayerInteractEvent): Unit = try{
-    if (
-      OxygenHandler.oxyconverters.contains(event.getClickedBlock.getType) &&
-        event.getAction == Action.RIGHT_CLICK_BLOCK
-    ) {
-      OxygenHandler
-        .update(
-          event.getPlayer,
-          OxygenHandler
-            .getOrElse(event.getPlayer, 0) + OxygenHandler.SIPHON_AMT
-        )
-      event.getPlayer.sendMessage(s"${ChatColor.GREEN} + ${OxygenHandler.SIPHON_AMT} oxy")
-      event.getClickedBlock.breakNaturally()
-    }
-  }catch{
-    case e:Exception =>
-      println(s"Oxygen Exception for ${event.getPlayer}")
-  }
-  @EventHandler
-  def oxygenOnDamage(event:EntityDamageByEntityEvent):Unit = try {
-    event.getDamager match {
-      case player:Player =>
-        player.sendMessage(s"${ChatColor.GREEN} +1 oxy")
-        OxygenHandler.update(player,OxygenHandler.get(player) + 1)
-    }
-  }catch{
-    case e:Exception =>
-      println("Error while handling Oxygen replenish")
-  }
-  @EventHandler
-  def removeItemGravity(event:PlayerDropItemEvent):Unit = try{
-    event.getItemDrop.setGravity(false)
-  }catch {
-    case e:Exception => println("Error while setting item gravity")
-  }
-  @EventHandler
-  def removeItemGravity2(event:EntitySpawnEvent):Unit = try{
-    event.getEntity match {
-      case _:Item =>  event.getEntity.setGravity(false)
-      case _ =>
-    }
-  }catch {
-    case e:Exception => println("Error while setting item gravity")
+  object Events extends Enumeration{
+    type Events = Value
+    val SpawnEvent,RocketChargeEvent,OxygenDiminishEvent,TerrainEvent = Value
+    def addValue(str:String) = Value(str)
   }
 }
 
-object Events extends Enumeration{
-  type Events = Value
-  val SpawnEvent,RocketChargeEvent,OxygenDiminishEvent,TerrainEvent = Value
-  def addValue(str:String) = Value(str)
-}
+
 

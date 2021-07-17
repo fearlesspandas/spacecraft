@@ -1,6 +1,7 @@
 package minecraft
 
-import events.{EventLoop, Events}
+import minecraft.events.EventLoop._
+import minecraft.events.EventLoop.Events._
 import minecraft.runnables.{EntitySpawnRunnable, OxygenHandler}
 import minecraft.runnables.SpaceCraftRunnable.{CommandProcessor, TabComplete}
 import org.bukkit.Material
@@ -13,42 +14,42 @@ object DefaultCommandProcessor {
       val eventName = args(0)
       val eventType = Events.withName(eventName)
       val newvalue = args(1).toInt
-      EventLoop.frequencyMap.update(eventType,newvalue)
-      sender.sendMessage(s"Set $eventType frequency to ${EventLoop.frequencyMap.getOrElse(eventType,0l).toString} (this requires a restart to take effect)")
+      frequencyMap.update(eventType,newvalue)
+      sender.sendMessage(s"Set $eventType frequency to ${frequencyMap.getOrElse(eventType,0l).toString} (this requires a restart to take effect)")
       true
     case "setprob" =>
       val eventName = args(0)
       val eventType = Events.withName(eventName)
       val newvalue = args(1).toDouble
-      EventLoop.probabilityMap.update(eventType,newvalue)
-      sender.sendMessage(s"Set $eventType probability to ${EventLoop.probabilityMap.getOrElse(eventType,0l).toString}")
+      probabilityMap.update(eventType,newvalue)
+      sender.sendMessage(s"Set $eventType probability to ${probabilityMap.getOrElse(eventType,0l).toString}")
       true
     case "readfreq" =>
       val eventName = args(0)
       val eventType = Events.withName(eventName)
-      sender.sendMessage(EventLoop.frequencyMap.getOrElse(eventType,0l).toString)
+      sender.sendMessage(frequencyMap.getOrElse(eventType,0l).toString)
       true
     case "readprob" =>
       val eventName = args(0)
       val eventType = Events.withName(eventName)
-      sender.sendMessage(EventLoop.probabilityMap.getOrElse(eventType,0l).toString)
+      sender.sendMessage(probabilityMap.getOrElse(eventType,0l).toString)
       true
     case "disablespc" =>
-      EventLoop.disabled = true
+      disabled = true
       true
     case "disableEvent" => sender match {
       case player:Player => if(args.size > 0) {
         val eventType = Events.withName(args(0))
-        EventLoop.disabledMap.update((eventType,player),true)
-        player.sendMessage(s"Set disable $eventType to ${EventLoop.disabledMap((eventType,player))}")
+        disabledMap.update((eventType,player),true)
+        player.sendMessage(s"Set disable $eventType to ${disabledMap((eventType,player))}")
       }
     }
       true
     case "enableEvent" => sender match {
         case player:Player => if(args.size > 0) {
           val eventType = Events.withName(args(0))
-          EventLoop.disabledMap.update((eventType,player),false)
-          player.sendMessage(s"Set disable $eventType to ${EventLoop.disabledMap((eventType,player))}")
+          disabledMap.update((eventType,player),false)
+          player.sendMessage(s"Set disable $eventType to ${disabledMap((eventType,player))}")
         }
       }
       true
@@ -57,7 +58,7 @@ object DefaultCommandProcessor {
         case p:Player =>
           val mat = p.getInventory.getItemInMainHand.getType
           val concatargs = if(args.size < 1) "" else args.drop(1).foldLeft(args(0))(_ + " " + _)
-          EventLoop.cmdmap.update((mat,p),concatargs)
+          cmdmap.update((mat,p),concatargs)
           p.sendMessage(s"Command set:$concatargs")
           true
       }
