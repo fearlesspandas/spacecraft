@@ -1,17 +1,37 @@
 package minecraft.runnables.typicalModels
 
 import java.time.LocalTime
+import java.util.UUID
 
 import Typical.core.dataset._
 import Typical.core.grammar._
 import org.bukkit.entity.Player
 import OxygenModel._
 import RocketChargeModel._
+import io.circe.{Decoder, Encoder}
+import io.circe.generic.JsonCodec
+import io.circe.syntax._
+import org.bukkit.Bukkit
 
 import scala.reflect.runtime.universe.TypeTag
 object Players {
+  implicit val decoderspcPlayer:Decoder[SpaceCraftPlayer] = Decoder.forProduct2(
+    "playerId","oxygenRemaining"
+  )(SpaceCraftPlayer.fromUUID)
+  implicit val encoderspcPlayer:Encoder[SpaceCraftPlayer] = Encoder.forProduct2(
+    "playerId","oxygenRemaining"
+  )(
+    p => (p.getUniqueId,p.oxygenRemaining)
+  )
+  object SpaceCraftPlayer{
+    def fromUUID(playerId:UUID,oxygenRemaining:Double):SpaceCraftPlayer = {
+      val onlinePlayer = Bukkit.getServer.getPlayer(playerId)
+      SpaceCraftPlayer(onlinePlayer,oxygenRemaining)
+    }
+  }
   case class SpaceCraftPlayer(value:Player,oxygenRemaining:Double,lastBreadth:LocalTime = LocalTime.now) extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Player]{
     override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = src.<--[SpaceCraftPlayer]
+
   }
   implicit class SpPlayerGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit typeTag: TypeTag[A]){
     def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) src else src.<--[SpaceCraftPlayer]
@@ -71,11 +91,11 @@ object Players {
         updatedPlayer <- player.handleOxy
       }yield src ++ players.apply(updatedPlayer)
 
-    def addRockets(player:Player,amt:Int):dataset[A] = for{
-      players <- src.players
-      playerState <- players.get(player)
-      _ <- playerState.addRockets(amt)
-    }yield src
+//    def addRockets(player:Player,amt:Int):dataset[A] = for{
+//      players <- src.players
+//      playerState <- players.get(player)
+//      _ <- playerState.addRockets(amt)
+//    }yield src
   }
 
 }

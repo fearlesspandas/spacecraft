@@ -1,5 +1,7 @@
 package minecraft.IO
 
+import java.io.{BufferedWriter, File, FileWriter}
+
 import minecraft.events.EventLoop._
 import io.circe.Decoder.Result
 import org.bukkit.Material
@@ -79,7 +81,17 @@ object SettingsDecoder {
 //      .map(r => r.right.get)
 //    raw
 //  }
-
+def writeFile(text:String) = {
+  val base = "spacecraftSnapshots"
+  val dir = new File(base)
+  println(dir.list().toSeq)
+  val file = new File(s"$base${File.separator}test.json")
+  dir.mkdirs()
+  file.createNewFile()
+  val bw = new BufferedWriter(new FileWriter(file))
+  bw.write(text)
+  bw.close()
+}
   def main(args: Array[String]): Unit = {
     val probfile = "src/main/resources/probabilities.json"
     val freqfile = "src/main/resources/frequencies.json"
@@ -96,8 +108,9 @@ object SettingsDecoder {
     //val res2 = read2(probfile)
    //readSettings2
     //res.foreach(println(_))
-    //println(OxygenDepletionModel(100,5,Seq(),10).asJson.as[OxygenDepletionModel].right.get.asJson)
+
+    println()
     println(res)
-    println(writeMap(res))
+    writeFile(OxygenDepletionModel(100,5,10,None).asJson.toString())
   }
 }

@@ -7,6 +7,7 @@ import Typical.core.grammar._
 import io.circe.generic.JsonCodec
 import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
+import org.bukkit.scheduler.BukkitTask
 import org.bukkit.{ChatColor, Material}
 
 import scala.reflect.runtime.universe.TypeTag
@@ -14,17 +15,20 @@ object OxygenModel {
   import io.circe._
   import io.circe.generic.auto._
   import io.circe.generic.semiauto._
-  implicit val decoderMat:Decoder[Material] = Decoder.forProduct1("name")(Material.getMaterial)
-  implicit val encoderMat:Encoder[Material] = Encoder.forProduct1("name")(m => (m.toString))
-  implicit val decoderOxy:Decoder[OxygenDepletionModel] = Decoder.forProduct4("startingMax","siphonAmt","oxyConverters","breadthDelay")(OxygenDepletionModel.apply)
-  implicit val encodeOxy:Encoder[OxygenDepletionModel] = Encoder.forProduct4("startingMax","siphonAmt","oxyConverters","breadthDelay")(o => (o.startingMax,o.siphonAmt,o.oxyConverters,o.breadthDelay))
-  case class OxygenDepletionModel(startingMax: Int, siphonAmt:Int  , oxyConverters:Seq[Material] , breadthDelay:Double ) extends SpaceCraftPlayerEvent {
+  implicit val decoderOxy:Decoder[OxygenDepletionModel] = Decoder.forProduct3("startingMax","siphonAmt","breadthDelay")(OxygenDepletionModel.serialize)
+  implicit val encodeOxy:Encoder[OxygenDepletionModel] = Encoder.forProduct3("startingMax","siphonAmt","breadthDelay")(o => (o.startingMax,o.siphonAmt,o.breadthDelay))
+  object OxygenDepletionModel{
+    def serialize(startingMax: Int, siphonAmt:Int, breadthDelay:Double):OxygenDepletionModel = {
+      OxygenDepletionModel(startingMax,siphonAmt,breadthDelay,None)
+    }
+  }
+  case class OxygenDepletionModel(startingMax: Int, siphonAmt:Int, breadthDelay:Double ,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
     val STARTING_MAX = startingMax
     val SIPHON_AMT = siphonAmt
-    val oxyconverters: Seq[Material] = oxyConverters
     val frequency = breadthDelay
     val probability = 1
 
+    override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
     def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = {
       println("Doing thing")
       player.value.sendMessage("oxy remaining: " + player.oxygenRemaining)
@@ -68,7 +72,7 @@ object OxygenModel {
   }
 
   implicit class OxygenModelGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit taga:TypeTag[A]){
-    def handleOxy:dataset[A] = (src +- OxygenDepletionModel(100,3,Seq(Material.BLUE_ICE),5)).-->[OxygenDepletionModel]
+    def handleOxy:dataset[A] = (src +- OxygenDepletionModel(100,3,5,None)).-->[OxygenDepletionModel]
   }
 
 }

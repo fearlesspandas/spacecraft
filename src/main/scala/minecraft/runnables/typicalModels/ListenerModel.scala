@@ -1,31 +1,44 @@
 package minecraft.runnables.typicalModels
+import java.io.{BufferedWriter, File, FileWriter}
+
 import Typical.core.dataset._
 import Typical.core.grammar._
 import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import org.bukkit.scheduler.BukkitRunnable
-
+import io.circe.generic.JsonCodec, io.circe.syntax._
 import scala.reflect.runtime.universe.TypeTag
 object ListenerModel{
-  trait ListenerModel[A<:dataset[_]] extends (A ==> A) {
-    override def apply(src: dataset[A]): dataset[A] = ???
+  trait ListenerModel[A<:dataset[_],U<:(A ==> (_>:A<:dataset[_]))] extends BukkitRunnable{
+    val delay:Long
+    val src:dataset[A with U]
+    def run()(implicit taga:TypeTag[A],tagu:TypeTag[U]):Unit = runner(src)
+    def shouldRun:Boolean
+    def runner(dat:dataset[A])(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = {
+      Thread.sleep(delay)
+      val next =  if(shouldRun) dat.-->[U] else dat
 
-
+      runner(next)
+    }
+    def writeFile(text:String) = {
+      val base = "spacecraftSnapshots"
+      val dir = new File(base)
+      val file = new File(s"$base${File.separator}${this.getTaskId}.json")
+      dir.mkdirs()
+      file.createNewFile()
+      val bw = new BufferedWriter(new FileWriter(file))
+      bw.write(text)
+      bw.close()
+    }
 
   }
 
+  implicit class ListenerGrammer[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](override val src:dataset[A])(implicit taga:TypeTag[A]) extends ListenerModel [SpaceCraftPlayer,SpaceCraftPlayerEvent]{
+    val event = src.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent]
+    override val delay: Long = event.frequency.toLong
+    override def shouldRun: Boolean = event.probability >= scala.math.random()
 
-
-  implicit class ListenerGrammer[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](src:dataset[A])(implicit taga:TypeTag[A]) extends BukkitRunnable{
-    //def derive[B<:dataset[A],U<:(A ==> B)](u:U)(implicit tagu:TypeTag[U],tagb:TypeTag[B]): dataset[B] = (src +- u) --> u
-    def runnable = this
-    val queue = Seq()
-
-    def runner(dat:dataset[A],delay:Long):dataset[A] = {
-      Thread.sleep(delay)
-      runner(dat.-->[SpaceCraftPlayerEvent],delay)
-    }
-    override def run(): Unit = runner(src,10000)
+    override def run(): Unit = super.run()
   }
 }
 

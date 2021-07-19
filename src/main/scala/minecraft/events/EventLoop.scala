@@ -1,4 +1,6 @@
 package minecraft.events
+import java.util.UUID
+
 import minecraft.IO.SettingsDecoder
 import minecraft.runnables._
 import org.bukkit.entity.{Item, Player}
@@ -12,10 +14,20 @@ import org.bukkit.{ChatColor, Material}
 import Typical.core.dataset._
 import Typical.core.grammar._
 import minecraft.runnables.typicalModels.OxygenModel.OxygenDepletionModel
-import minecraft.runnables.typicalModels.PlayerEvents.{PlayerEvents, SpaceCraftPlayerEvent}
+import minecraft.runnables.typicalModels.PlayerEvents._
 import minecraft.runnables.typicalModels.Players.{Players, SpaceCraftPlayer}
 import org.bukkit.event.world.ChunkLoadEvent
 import minecraft.runnables.typicalModels.ListenerModel._
+import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
+import io.circe._
+import io.circe.parser._
+import io.circe.generic.JsonCodec
+import io.circe.syntax._
+import PlayerEvents._
+import minecraft.runnables.typicalModels.EventManager.EventManager
+import minecraft.runnables.typicalModels.HeightReminder.HeightReminder
+
+import scala.io.Source
 object EventLoop {
   type SpaceCraftDeps = OxygenHandler with Players with PlayerEvents with FrequencyMap with ProbabilityMap
   var dat:dataset[SpaceCraftDeps] = data[SpaceCraftDeps]()
@@ -28,6 +40,7 @@ object EventLoop {
   val cmdmap:scala.collection.mutable.Map[(Material,Player),String] = scala.collection.mutable.Map()
   def shouldRun(id:Events.Events,player:Player):Boolean = if (scala.math.random() <= probabilityMap(id)  && !disabled & !disabledMap.getOrElse((id,player),false)) true else false
   def runFromTimer(b:BukkitRunnable,plug:JavaPlugin,eventType:Events.Events):BukkitTask = b.runTaskTimer(plug,frequencyMap(eventType),frequencyMap(eventType))
+
   val runnerMap:Map[Events.Events,Player => SpaceCraftRunnable] = Map(
     Events.SpawnEvent -> (EntitySpawnRunnable(_:Player)),
     Events.RocketChargeEvent -> (RocketCharge(_:Player)),
@@ -36,13 +49,25 @@ object EventLoop {
   class EventLoopListener(plug:JavaPlugin) extends Listener {
     plug.getServer().getPluginManager().registerEvents(this,plug)
 
-    val oxyModel = OxygenDepletionModel(1000,3,Seq(Material.BLUE_ICE),1000)
+    val oxyModel = OxygenDepletionModel(100,3,10000,None)
+    val rocketChargeModel = RocketChargeModel(50000,None)
+    val taskMappings = scala.collection.mutable.Map[(SpaceCraftPlayerEvent,SpaceCraftPlayer),BukkitTask]()
+    val heightReminder = HeightReminder(5000)
 
+
+    val eventManager:dataset[EventManager] = EventManager(scala.collection.mutable.Map.empty[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]])
+
+
+    val baseTasks:Seq[SpaceCraftPlayerEvent] = Seq(
+      oxyModel,
+      rocketChargeModel,
+      heightReminder
+    )
     @EventHandler
     def onPlayerJoin(event:PlayerJoinEvent):Unit = {
      event.getPlayer.sendMessage("Welcome to space")
-      val t = data[SpaceCraftPlayer]().++(SpaceCraftPlayer(event.getPlayer,100)).++[SpaceCraftPlayerEvent,OxygenDepletionModel](oxyModel)
-      t.runTaskAsynchronously(plug)
+      val newplayer = SpaceCraftPlayer(event.getPlayer,100)
+      baseTasks.foreach(e => eventManager.updateEvent(e,newplayer,plug))
     }
   }
 
