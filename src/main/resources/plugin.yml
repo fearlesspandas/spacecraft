@@ -9,68 +9,14 @@ commands:
        usage: /<command>
        permission: spacecraft.setfreq
        permission-message: You don't have <permission>
-    setprob:
+    showevents:
+      description: sets the frequency of event rolls.
+      usage: /<command>
+      permission: spacecraft.showevents
+      permission-message: You don't have <permission>
+    addoxy:
       description: sets the probability of a spacecraft event.
       usage: /<command>
-      permission: spacecraft.setprob
-      permission-message: You don't have <permission>
-    setoxygen:
-      description: sets oxygen level
-      usage: /<command> <int>
-      permission: spacecraft.setoxygen
-      permission-message: You don't have <permission>
-    disablespc:
-      description: disables spacecraft events.
-      usage: /<command>
-      permission: spacecraft.disablespc
-      permission-message: You don't have <permission>
-    disableEvent:
-      description: disables spacecraft events.
-      usage: /<command>
-      permission: spacecraft.disableEvent
-      permission-message: You don't have <permission>
-    enableEvent:
-      description: enable spacecraft events.
-      usage: /<command>
-      permission: spacecraft.enableEvent
-      permission-message: You don't have <permission>
-    setcmd:
-      description: binds command to held item
-      usage: /<command>
-      permission: spacecraft.setcmd
-      permission-message: You don't have <permission>
-    readprob:
-      description: shows probability of event
-      usage: /<command>
-      permission: spacecraft.readprob
-      permission-message: You don't have <permission>
-    readfreq:
-      description: shows frequency of event
-      usage: /<command>
-      permission: spacecraft.readfreq
-      permission-message: You don't have <permission>
-    spawnevent_theme:
-      description: shows frequency of event
-      usage: /<command>
-      permission: spacecraft.spawnevent_theme
-      permission-message: You don't have <permission>
-    spawnevent_random:
-      description: shows frequency of event
-      usage: /<command>
-      permission: spacecraft.spawnevent_random
-    addloot:
-      description: shows frequency of event
-      usage: /<command>
-      permission: spacecraft.addloot
-      permission-message: You don't have <permission>
-    setgravity:
-      description: shows frequency of event
-      usage: /<command>
-      permission: spacecraft.setgravity
-      permission-message: You don't have <permission>
-    runevent:
-      description: shows frequency of event
-      usage: /<command>
-      permission: spacecraft.runevent
+      permission: spacecraft.addoxy
       permission-message: You don't have <permission>
 
