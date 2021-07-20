@@ -9,10 +9,13 @@ import org.bukkit.entity.Player
 import OxygenModel._
 import RocketChargeModel._
 import io.circe.{Decoder, Encoder}
-import io.circe.generic.JsonCodec
+import io.circe.generic._
 import io.circe.syntax._
+import io.circe._
+import io.circe.parser._
 import org.bukkit.Bukkit
 
+import scala.io.Source
 import scala.reflect.runtime.universe.TypeTag
 object Players {
   implicit val decoderspcPlayer:Decoder[SpaceCraftPlayer] = Decoder.forProduct2(
@@ -32,6 +35,10 @@ object Players {
   case class SpaceCraftPlayer(value:Player,oxygenRemaining:Double,lastBreadth:LocalTime = LocalTime.now) extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Player]{
     override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = src.<--[SpaceCraftPlayer]
 
+  }
+
+  def readPlayer(src:String):dataset[SpaceCraftPlayer] = {
+    parse(Source.fromFile(src).getLines().foldLeft("")(_ + _)).getOrElse(Json.Null).as[SpaceCraftPlayer].getOrElse(DatasetError[SpaceCraftPlayer]())
   }
   implicit class SpPlayerGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit typeTag: TypeTag[A]){
     def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) src else src.<--[SpaceCraftPlayer]

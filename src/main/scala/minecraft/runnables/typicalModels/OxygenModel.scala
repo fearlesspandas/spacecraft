@@ -15,15 +15,14 @@ object OxygenModel {
   import io.circe._
   import io.circe.generic.auto._
   import io.circe.generic.semiauto._
-  implicit val decoderOxy:Decoder[OxygenDepletionModel] = Decoder.forProduct3("startingMax","siphonAmt","breadthDelay")(OxygenDepletionModel.serialize)
-  implicit val encodeOxy:Encoder[OxygenDepletionModel] = Encoder.forProduct3("startingMax","siphonAmt","breadthDelay")(o => (o.startingMax,o.siphonAmt,o.breadthDelay))
+  implicit val decoderOxy:Decoder[OxygenDepletionModel] = Decoder.forProduct2("siphonAmt","breadthDelay")(OxygenDepletionModel.serialize)
+  implicit val encodeOxy:Encoder[OxygenDepletionModel] = Encoder.forProduct2("siphonAmt","breadthDelay")(o => (o.siphonAmt,o.breadthDelay))
   object OxygenDepletionModel{
-    def serialize(startingMax: Int, siphonAmt:Int, breadthDelay:Double):OxygenDepletionModel = {
-      OxygenDepletionModel(startingMax,siphonAmt,breadthDelay,None)
+    def serialize(siphonAmt:Int, breadthDelay:Double):OxygenDepletionModel = {
+      OxygenDepletionModel(siphonAmt,breadthDelay,None)
     }
   }
-  case class OxygenDepletionModel(startingMax: Int, siphonAmt:Int, breadthDelay:Double ,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
-    val STARTING_MAX = startingMax
+  case class OxygenDepletionModel(siphonAmt:Int, breadthDelay:Double ,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
     val SIPHON_AMT = siphonAmt
     val frequency = breadthDelay
     val probability = 1
@@ -69,10 +68,14 @@ object OxygenModel {
     override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq(
       addOxyTabComplete
     )
+
+    override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = OxygenDepletionModel(this.siphonAmt,frequency,this.value)
+
+    override def setProbability(probability: Double): SpaceCraftPlayerEvent = this
   }
 
   implicit class OxygenModelGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit taga:TypeTag[A]){
-    def handleOxy:dataset[A] = (src +- OxygenDepletionModel(100,3,5,None)).-->[OxygenDepletionModel]
+    def handleOxy:dataset[A] = (src +- OxygenDepletionModel(3,5,None)).-->[OxygenDepletionModel]
   }
 
 }

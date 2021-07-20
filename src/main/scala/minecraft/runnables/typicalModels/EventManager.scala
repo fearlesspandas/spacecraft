@@ -18,8 +18,17 @@ object EventManager {
     def updateEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plug:JavaPlugin,via:SpaceCraftPlayerEvent = NoEvent):dataset[A] = for{
       eventManager <- src.eventManager
     }yield {
-      player.sendMessage("adding tasks")
-      val updatedEventTask  = eventManager.value.getOrElse((event.name,player.getUniqueId),data[SpaceCraftPlayer]() ++ player ++ event ).updateEvent(event,plug,via)
+      val updatedEventTask  =
+        eventManager
+          .value
+          .getOrElse(
+            (
+              event.name,
+              player.getUniqueId
+            ),
+              data[SpaceCraftPlayer]() ++ player ++ event
+          )
+          .updateEvent(event,plug,via)
        eventManager.update((event.name,player.getUniqueId),updatedEventTask)
       for{
         taskplayer <- updatedEventTask.player
@@ -27,10 +36,12 @@ object EventManager {
         taskplayer.sendMessage(s"EventUpdated:${updatedEventTask.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent].value}")
         player
       }
-      player.sendMessage(s"event updated${updatedEventTask}")
-      player.sendMessage(s"EventManager${eventManager.value}")
       src ++ eventManager
     }
+
+    def triggerEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plugin: JavaPlugin):dataset[A] = for{
+      eventmanager <- src.eventManager
+    }yield src ++ eventmanager.updateEvent(event,player,plugin,event)
   }
 
 

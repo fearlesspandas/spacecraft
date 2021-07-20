@@ -28,6 +28,8 @@ object RocketExperience {
       player
     }
 
+    override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this
 
+    override def setProbability(probability: Double): SpaceCraftPlayerEvent = this
   }
 }

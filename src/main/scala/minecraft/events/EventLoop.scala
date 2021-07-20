@@ -1,81 +1,58 @@
 package minecraft.events
 import java.util.UUID
 
-import minecraft.IO.SettingsDecoder
-import minecraft.runnables._
-import org.bukkit.entity.{Item, Player}
-import org.bukkit.event.block.Action
-import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntitySpawnEvent}
-import org.bukkit.event.player.{PlayerDropItemEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerMoveEvent}
-import org.bukkit.event.{EventHandler, EventPriority, Listener}
-import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scheduler.{BukkitRunnable, BukkitTask}
-import org.bukkit.{ChatColor, Material}
 import Typical.core.dataset._
 import Typical.core.grammar._
-import minecraft.runnables.typicalModels.OxygenModel.OxygenDepletionModel
-import minecraft.runnables.typicalModels.PlayerEvents._
-import minecraft.runnables.typicalModels.Players.{Players, SpaceCraftPlayer}
-import org.bukkit.event.world.ChunkLoadEvent
-import minecraft.runnables.typicalModels.ListenerModel._
-import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
-import io.circe._
-import io.circe.parser._
-import io.circe.generic.JsonCodec
-import io.circe.syntax._
-import PlayerEvents._
 import minecraft.runnables.typicalModels.EventManager.EventManager
 import minecraft.runnables.typicalModels.HeightReminder.HeightReminder
-
-import scala.io.Source
+import minecraft.runnables.typicalModels.OxygenModel.OxygenDepletionModel
+import minecraft.runnables.typicalModels.OxygenReplenishEvent.OxygenReplenishEvent
+import minecraft.runnables.typicalModels.PlayerEvents._
+import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
+import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
+import org.bukkit.entity.Player
+import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.{EventHandler, Listener}
+import org.bukkit.plugin.java.JavaPlugin
 object EventLoop {
-  type SpaceCraftDeps = OxygenHandler with Players with PlayerEvents with FrequencyMap with ProbabilityMap
-  var dat:dataset[SpaceCraftDeps] = data[SpaceCraftDeps]()
+  val oxyModel = OxygenDepletionModel(3,10000,None)
+  val rocketChargeModel = RocketChargeModel(50000,None)
+  val heightReminder = HeightReminder(5000)
+  val oxyReplenishModel = OxygenReplenishEvent(1,1,None)
 
-  type EventId = Int
-  var disabled:Boolean = false
-  val frequencyMap = SettingsDecoder.getFreqSettings(SettingsDecoder.freqfileloc)
-  val probabilityMap:scala.collection.mutable.Map[Events.Events,Double] = SettingsDecoder.getProbSettings(SettingsDecoder.probfileloc)
-  val disabledMap:scala.collection.mutable.Map[(Events.Events,Player),Boolean] = scala.collection.mutable.Map()
-  val cmdmap:scala.collection.mutable.Map[(Material,Player),String] = scala.collection.mutable.Map()
-  def shouldRun(id:Events.Events,player:Player):Boolean = if (scala.math.random() <= probabilityMap(id)  && !disabled & !disabledMap.getOrElse((id,player),false)) true else false
-  def runFromTimer(b:BukkitRunnable,plug:JavaPlugin,eventType:Events.Events):BukkitTask = b.runTaskTimer(plug,frequencyMap(eventType),frequencyMap(eventType))
-
-  val runnerMap:Map[Events.Events,Player => SpaceCraftRunnable] = Map(
-    Events.SpawnEvent -> (EntitySpawnRunnable(_:Player)),
-    Events.RocketChargeEvent -> (RocketCharge(_:Player)),
-    Events.OxygenDiminishEvent -> (OxygenHandler(_:Player))
+  val eventManager:dataset[EventManager] = EventManager(
+    scala.collection.mutable.Map.empty[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]]
+  )
+  val baseTasks:Seq[SpaceCraftPlayerEvent] = Seq(
+    oxyModel,
+    rocketChargeModel,
+    heightReminder
   )
   class EventLoopListener(plug:JavaPlugin) extends Listener {
     plug.getServer().getPluginManager().registerEvents(this,plug)
 
-    val oxyModel = OxygenDepletionModel(100,3,10000,None)
-    val rocketChargeModel = RocketChargeModel(50000,None)
-    val taskMappings = scala.collection.mutable.Map[(SpaceCraftPlayerEvent,SpaceCraftPlayer),BukkitTask]()
-    val heightReminder = HeightReminder(5000)
 
-
-    val eventManager:dataset[EventManager] = EventManager(scala.collection.mutable.Map.empty[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]])
-
-
-    val baseTasks:Seq[SpaceCraftPlayerEvent] = Seq(
-      oxyModel,
-      rocketChargeModel,
-      heightReminder
-    )
     @EventHandler
     def onPlayerJoin(event:PlayerJoinEvent):Unit = {
      event.getPlayer.sendMessage("Welcome to space")
       val newplayer = SpaceCraftPlayer(event.getPlayer,100)
       baseTasks.foreach(e => eventManager.updateEvent(e,newplayer,plug))
     }
+    @EventHandler
+    def replenishOxyOnDamage(event:EntityDamageEvent):Unit = {
+      event.getEntity match {
+        case p:Player => for{
+          em <- eventManager
+          spcplayer <- em.value.getOrElse((oxyModel.name,p.getUniqueId),throw new Error(s"No OxygenModel found for ${p.getDisplayName}")).player
+        }yield
+          eventManager.updateEvent(oxyModel,spcplayer,plug,oxyReplenishModel)
+      }
+    }
+
+
   }
 
-  object Events extends Enumeration{
-    type Events = Value
-    val SpawnEvent,RocketChargeEvent,OxygenDiminishEvent,TerrainEvent = Value
-    def addValue(str:String) = Value(str)
-  }
 }
 
 

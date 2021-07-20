@@ -30,6 +30,10 @@ object RocketChargeModel {
     override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq()
 
     override val probability: Double = 1
+
+    override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency =frequency)
+
+    override def setProbability(probability: Double): SpaceCraftPlayerEvent = this
   }
 
   implicit class RocketGrammer[A<:SpaceCraftPlayer](src:dataset[A])(implicit ttag:TypeTag[A]){

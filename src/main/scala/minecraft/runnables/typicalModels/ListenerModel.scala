@@ -14,23 +14,24 @@ object ListenerModel{
     val src:dataset[A with U]
     def run()(implicit taga:TypeTag[A],tagu:TypeTag[U]):Unit = runner(src)
     def shouldRun:Boolean
+    val serializeA:dataset[A] => String
     def runner(dat:dataset[A])(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = {
+      println(s"Running:${this.toString}")
       Thread.sleep(delay)
+      writeFile(serializeA(dat),this.getTaskId)
       val next =  if(shouldRun) dat.-->[U] else dat
-
       runner(next)
     }
-    def writeFile(text:String) = {
+    def writeFile(text:String,taskId:Long) = {
       val base = "spacecraftSnapshots"
       val dir = new File(base)
-      val file = new File(s"$base${File.separator}${this.getTaskId}.json")
+      val file = new File(s"$base${File.separator}${taskId}.json")
       dir.mkdirs()
       file.createNewFile()
       val bw = new BufferedWriter(new FileWriter(file))
       bw.write(text)
       bw.close()
     }
-
   }
 
   implicit class ListenerGrammer[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](override val src:dataset[A])(implicit taga:TypeTag[A]) extends ListenerModel [SpaceCraftPlayer,SpaceCraftPlayerEvent]{
@@ -39,6 +40,8 @@ object ListenerModel{
     override def shouldRun: Boolean = event.probability >= scala.math.random()
 
     override def run(): Unit = super.run()
+
+    override val serializeA: dataset[SpaceCraftPlayer] => String = spc => spc.get.asJson.toString
   }
 }
 

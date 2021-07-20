@@ -15,5 +15,9 @@ case class HeightReminder(frequency:Double,value:Option[BukkitTask] = None) exte
     if(player.getLocation.getY > 300) player.sendMessage("It may not look like it but ou're really high up")
     player
   }
+
+  override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = HeightReminder(frequency,this.value)
+
+  override def setProbability(probability: Double): SpaceCraftPlayerEvent = this
 }
 }

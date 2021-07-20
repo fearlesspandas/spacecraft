@@ -24,7 +24,6 @@ object SettingsDecoder {
     def removeSpecialChars(str:String)(regx:Seq[Char => Boolean] = Seq(_.isLetterOrDigit,_ == '.')):String = str.filter(c => regx.foldLeft(false)((b,r) => b || r(c)))
     def processLong(str:String): Long = removeSpecialChars(str)().toLong
     def processDouble(str:String):Double = removeSpecialChars(str)().toDouble
-    def processEventString(str:String):Events.Events = Events.withName(removeSpecialChars(str)())
     def processMaterial(str:String):Material = Material.getMaterial(removeSpecialChars(str)().toUpperCase())
     def processSeq[A](str:String)(implicit f:String => A):Seq[A] = removeSpecialChars(str)(Seq(
       _.isLetterOrDigit,_ == '.',_ == ","
@@ -34,8 +33,8 @@ object SettingsDecoder {
     val splitstr = str.split(":")
     (fa(splitstr(0)),fb(splitstr(1)))
   }
-  def getFreqSettings(loc:String):Map[Events.Events,Long] = readSettings[Events.Events,Long](loc)(loc.processEventString(_),loc.processLong(_))
-  def getProbSettings(loc:String):Map[Events.Events, Double] = readSettings[Events.Events,Double](loc)(loc.processEventString(_),loc.processDouble(_))
+//  def getFreqSettings(loc:String):Map[Events.Events,Long] = readSettings[Events.Events,Long](loc)(loc.processEventString(_),loc.processLong(_))
+//  def getProbSettings(loc:String):Map[Events.Events, Double] = readSettings[Events.Events,Double](loc)(loc.processEventString(_),loc.processDouble(_))
   def readSettings[A,B](loc:String)(implicit fa:String => A,fb:String => B):Map[A,B] = try{
     val lines = Source.fromFile(loc).getLines().toSeq
     lines.foldLeft(Map[A,B]())( (valmap,line) => valmap ++ (line match {
@@ -65,14 +64,7 @@ object SettingsDecoder {
 //  implicit val decodeMapEnums:Decoder[scala.collection.immutable.Map[Events,Double]] = Decoder.decodeMap[Events,Double]
 //
 //  implicit def decoderEnums[E<:Events.Events](enum:E) = Decoder.decodeEnumeration(enum)
-  implicit val decodeConfig:Decoder[config] = new Decoder[config] {
-  override def apply(c: HCursor): Result[config] = for{
-     eventName <- c.downField("event").as[String]
-     event = Events.withName(eventName)
-     prob <- c.downField("prob").as[Double]
-  }yield  config(event,prob)
-}
-  case class config(event:Events.Events,prob:Double)
+
 //  def read2(str:String) = {
 //    val raw = Source.fromFile(str).getLines().toSeq.map( str => {
 //      val json = parse(str).getOrElse(Json.Null)
@@ -95,7 +87,6 @@ def writeFile(text:String) = {
   def main(args: Array[String]): Unit = {
     val probfile = "src/main/resources/probabilities.json"
     val freqfile = "src/main/resources/frequencies.json"
-    val res  = getProbSettings(probfile)
     val testOxy =
       """{
         |"startingMax":100,
@@ -109,8 +100,7 @@ def writeFile(text:String) = {
    //readSettings2
     //res.foreach(println(_))
 
-    println()
-    println(res)
-    writeFile(OxygenDepletionModel(100,5,10,None).asJson.toString())
+    writeFile(OxygenDepletionModel(5,10,None).asJson.toString())
+
   }
 }

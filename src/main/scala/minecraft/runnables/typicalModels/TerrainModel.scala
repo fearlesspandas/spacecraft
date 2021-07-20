@@ -23,11 +23,15 @@ object TerrainModel {
     def apply(bukkitTask:BukkitTask):SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
     override def apply(player: SpaceCraftPlayer):SpaceCraftPlayer = player match {
       case _ if player.isGliding =>
-        val schematic = schematics.collectFirst({case s if s.probability >= scala.math.random() => s})
-        .getOrElse(schematics.head)
-        player.performCommand(schemaLoadCmd(schematic.location))
-        player.performCommand("paste")
+        schematics.collectFirst({case s if s.probability >= scala.math.random() => s}).map(schematic => {
+          player.performCommand(schemaLoadCmd(schematic.location))
+          player.performCommand("paste")
+        })
         player
     }
+
+    override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)
+
+    override def setProbability(probability: Double): SpaceCraftPlayerEvent = this.copy(probability = probability)
   }
 }
