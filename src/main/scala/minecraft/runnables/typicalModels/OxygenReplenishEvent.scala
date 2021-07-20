@@ -11,7 +11,11 @@ object OxygenReplenishEvent {
     override val name: String = "OxygenReplenishEvent"
     def apply(bukkitTask: BukkitTask):SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
 
-    override def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = player.copy(oxygenRemaining = player.oxygenRemaining + 1)
+    override def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = {
+      println("oxyReplenishHappening")
+      player.value.sendMessage(s"Attemtping to replenish oxygen, curr${player.oxygenRemaining}")
+      player.copy(oxygenRemaining = player.oxygenRemaining + 1)
+    }
 
     override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)
 

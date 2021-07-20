@@ -11,9 +11,14 @@ import org.bukkit.plugin.java.JavaPlugin
 import scala.collection.mutable.Map
 import scala.reflect.runtime.universe.TypeTag
 object EventManager {
-  case class EventManager(value:Map[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]]) extends ::[EventManager] with produces[Map[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]]]
+  case class EventManager(
+                           value:Map[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]],
+                           eventStack:scala.collection.mutable.ArrayStack[() => Unit] = scala.collection.mutable.ArrayStack()
+                         )
+    extends ::[EventManager]
+    with produces[Map[(String,UUID),dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]]]
 
-  implicit class EventManagerGrammar[A<:EventManager](src:dataset[A])(implicit taga:TypeTag[A]){
+  implicit class EventManagerGrammar[A<:EventManager](src:dataset[A])(implicit taga:TypeTag[A],serializer:dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] => Unit){
     def eventManager:dataset[EventManager] = if(src.isInstanceOf[EventManager]) src else src.<--[EventManager]
     def updateEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plug:JavaPlugin,via:SpaceCraftPlayerEvent = NoEvent):dataset[A] = for{
       eventManager <- src.eventManager
@@ -29,14 +34,20 @@ object EventManager {
               data[SpaceCraftPlayer]() ++ player ++ event
           )
           .updateEvent(event,plug,via)
-       eventManager.update((event.name,player.getUniqueId),updatedEventTask)
+      println("event updated in event manager")
+       //eventManager.update((event.name,player.getUniqueId),updatedEventTask)
       for{
         taskplayer <- updatedEventTask.player
       }yield{
         taskplayer.sendMessage(s"EventUpdated:${updatedEventTask.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent].value}")
         player
       }
-      src ++ eventManager
+      println(s"isEmpty:${eventManager.isEmpty}")
+      println("task updated")
+      val res = if(src.isInstanceOf[EventManager]) eventManager.asInstanceOf[dataset[A]] else src ++ eventManager
+      println("newEvent manager crated")
+      println(s"newmanager isemtpy:${res.isEmpty}")
+      res
     }
 
     def triggerEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plugin: JavaPlugin):dataset[A] = for{

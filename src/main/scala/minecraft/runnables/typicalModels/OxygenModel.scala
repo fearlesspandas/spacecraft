@@ -41,22 +41,26 @@ object OxygenModel {
           val remaining = player.oxygenRemaining
           if (remaining <= 0 ) {
             player.value.sendMessage(s"${ChatColor.LIGHT_PURPLE} No oxy remaining")
-            player.value.damage(player.getHealthScale / 4)
-            player
+            val postProcess = () => player.value.damage(player.getHealthScale / 2)
+            player.copy(postProcessing = postProcess)
           }
           else {
-              val res = player.copy(oxygenRemaining = player.oxygenRemaining - siphonAmt,lastBreadth = LocalTime.now())
+              val res = player.copy(oxygenRemaining = player.oxygenRemaining - siphonAmt,postProcessing = () => ())
               player.value.sendMessage(s"${ChatColor.AQUA} oxy:${res.oxygenRemaining}")
               res
           }
         } else {
-          player.damage(player.getHealthScale / 2)
+
+          val postProcess = () => {
+            player.value.sendMessage("Damaged by Process")
+            player.value.damage(player.getHealth/2)
+          }
           player.value.sendMessage("Put on a diamond helmet or you'll suffocate")
-          player
+          player.copy(postProcessing = postProcess)
         }
       }else{
         player.value.sendMessage("nothing to do")
-        player
+        player.copy(postProcessing = () => ())
       }
     }
 

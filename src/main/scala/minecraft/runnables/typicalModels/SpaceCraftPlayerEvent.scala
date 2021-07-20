@@ -63,42 +63,47 @@ object PlayerEvents{
     def handle[U <: (A ==> A)](u:U)(implicit tagu:TypeTag[U]):dataset[A] = ((src +- u) --> u)
   }
 
-  implicit class PlayerEventsGram[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](src:dataset[A])(implicit taga:TypeTag[A]){
-    def updateEvent(event:SpaceCraftPlayerEvent,plugin:JavaPlugin,via:SpaceCraftPlayerEvent = NoEvent):dataset[A] =
+  implicit class PlayerEventsGram[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](
+                                                                                   src:dataset[A]
+                                                                                 )(
+    implicit taga:TypeTag[A],
+    serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit
+  ){
+    def updateEvent(event:SpaceCraftPlayerEvent,plugin:JavaPlugin,via:SpaceCraftPlayerEvent = NoEvent):dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] =
       src
         .multifetch[SpaceCraftPlayerEvent]
-        .fold(
+        .fold[SpaceCraftPlayerEvent with SpaceCraftPlayer](
           _ => for{
             player <-(src --> via).player
           }yield{
             player.sendMessage("triggering task")
             val ctx = src ++ event ++ player
             val eventTask = event.apply(ctx.runTaskAsynchronously(plugin))
-            src ++ eventTask ++ player
+            val res = src ++ eventTask ++ player
+            serializer(res)
+            res
           }
         )(
           d => {
-
             val oldEvent = d.asInstanceOf[SpaceCraftPlayerEvent]
             //get task id and immediately cancel task
             val eventTaskId = oldEvent.value.map(_.getTaskId)
             println(s"modifying ${eventTaskId}")
+            serializer(src)
             oldEvent.value.map(_.cancel())
-            //retrieve player from task output
-//            val transientPlayer = (for{
-//              updatedPlayer <- eventTaskId.map(t => readPlayer(filename(t))).fromOption
-//            }yield{
-//              updatedPlayer
-//            }).biMap(_ => src.player.get)(r => r.get)
-            //println(transientPlayer)
-            //apply other transformations on top of serialized result
+            println(s"event is cancelled:${oldEvent.value.map(_.isCancelled)}")
+            val newSrc = (src.deserializer() --> via)
             for{
-              player <- (src --> via).player
+              player <- (newSrc).player
             }yield{
               //update context and start the task again
-              val ctx = src ++ event ++ player
+              println("Player event updated")
+              val ctx = newSrc ++ event ++ player
               val eventTask = event.apply(ctx.runTaskAsynchronously(plugin))
-              src ++ eventTask ++ player
+              val res = newSrc ++ eventTask ++ player
+              serializer(res)
+              println("PlayerEventSerialized")
+              res
             }
           }
         )

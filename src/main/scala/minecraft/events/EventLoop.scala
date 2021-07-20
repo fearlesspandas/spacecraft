@@ -11,7 +11,6 @@ import minecraft.runnables.typicalModels.PlayerEvents._
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
 import org.bukkit.entity.Player
-import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.plugin.java.JavaPlugin
@@ -29,6 +28,21 @@ object EventLoop {
     rocketChargeModel,
     heightReminder
   )
+  implicit val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit = src => src.multifetch[SpaceCraftPlayerEvent].fold(_ => throw new Error("issue updating event manager"))(
+    d => {
+     val event = d.asInstanceOf[SpaceCraftPlayerEvent]
+      for{
+        player <- src.player
+        em <- eventManager
+      }yield {
+        em.eventStack.push(player.postProcessing)
+        //player.sendMessage(s"Successfully saved ${event.toString()}")
+        em.value.update((event.name,player.getUniqueId),src)
+        em
+      }
+    }
+  )
+
   class EventLoopListener(plug:JavaPlugin) extends Listener {
     plug.getServer().getPluginManager().registerEvents(this,plug)
 
@@ -39,16 +53,16 @@ object EventLoop {
       val newplayer = SpaceCraftPlayer(event.getPlayer,100)
       baseTasks.foreach(e => eventManager.updateEvent(e,newplayer,plug))
     }
-    @EventHandler
-    def replenishOxyOnDamage(event:EntityDamageEvent):Unit = {
-      event.getEntity match {
-        case p:Player => for{
-          em <- eventManager
-          spcplayer <- em.value.getOrElse((oxyModel.name,p.getUniqueId),throw new Error(s"No OxygenModel found for ${p.getDisplayName}")).player
-        }yield
-          eventManager.updateEvent(oxyModel,spcplayer,plug,oxyReplenishModel)
-      }
-    }
+//    @EventHandler
+//    def replenishOxyOnDamage(event:EntityDamageEvent):Unit = {
+//      event.getEntity match {
+//        case p:Player => for{
+//          em <- eventManager
+//          spcplayer <- em.value.getOrElse((oxyModel.name,p.getUniqueId),throw new Error(s"No OxygenModel found for ${p.getDisplayName}")).player
+//        }yield
+//          eventManager.updateEvent(oxyModel,spcplayer,plug,oxyReplenishModel)
+//      }
+//    }
 
 
   }

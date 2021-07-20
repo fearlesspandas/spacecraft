@@ -8,19 +8,34 @@ import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import org.bukkit.scheduler.BukkitRunnable
 import io.circe.generic.JsonCodec, io.circe.syntax._
 import scala.reflect.runtime.universe.TypeTag
+import minecraft.events.EventLoop._
 object ListenerModel{
   trait ListenerModel[A<:dataset[_],U<:(A ==> (_>:A<:dataset[_]))] extends BukkitRunnable{
     val delay:Long
     val src:dataset[A with U]
-    def run()(implicit taga:TypeTag[A],tagu:TypeTag[U]):Unit = runner(src)
+    def run()(implicit taga:TypeTag[A],tagu:TypeTag[U]):Unit = runner
     def shouldRun:Boolean
-    val serializeA:dataset[A] => String
-    def runner(dat:dataset[A])(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = {
+    val serializer:dataset[A with U] => Unit
+    val deserializer: () => dataset[A with U]
+    def runner(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = try{
       println(s"Running:${this.toString}")
-      Thread.sleep(delay)
-      writeFile(serializeA(dat),this.getTaskId)
+      val dat = deserializer()
+      if(this.isCancelled) return dat
       val next =  if(shouldRun) dat.-->[U] else dat
-      runner(next)
+      serializer(next)
+      Thread.sleep(delay)
+      runner
+    }catch{
+      case e:Exception =>
+        println(e.getMessage)
+        Thread.sleep(delay)
+        runner
+    }
+    def noLoopRunner(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = {
+      val dat = deserializer()
+      val next = if(shouldRun) dat.-->[U] else dat
+      serializer(next)
+      next
     }
     def writeFile(text:String,taskId:Long) = {
       val base = "spacecraftSnapshots"
@@ -34,14 +49,25 @@ object ListenerModel{
     }
   }
 
-  implicit class ListenerGrammer[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](override val src:dataset[A])(implicit taga:TypeTag[A]) extends ListenerModel [SpaceCraftPlayer,SpaceCraftPlayerEvent]{
+  implicit class ListenerGrammer[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](
+                                                                                  override val src:dataset[A]
+                                                                                )(
+    implicit taga:TypeTag[A],
+    override val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit
+  ) extends ListenerModel [SpaceCraftPlayer,SpaceCraftPlayerEvent]{
     val event = src.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent]
     override val delay: Long = event.frequency.toLong
     override def shouldRun: Boolean = event.probability >= scala.math.random()
 
     override def run(): Unit = super.run()
 
-    override val serializeA: dataset[SpaceCraftPlayer] => String = spc => spc.get.asJson.toString
+    override val deserializer: () => dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = () => for{
+      player <- src.player
+      em <- eventManager
+    }yield{
+      val event = src.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent]
+      em.value((event.name,player.getUniqueId))
+    }
   }
 }
 

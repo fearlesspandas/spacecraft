@@ -32,8 +32,8 @@ object Players {
       SpaceCraftPlayer(onlinePlayer,oxygenRemaining)
     }
   }
-  case class SpaceCraftPlayer(value:Player,oxygenRemaining:Double,lastBreadth:LocalTime = LocalTime.now) extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Player]{
-    override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = src.<--[SpaceCraftPlayer]
+  case class SpaceCraftPlayer(value:Player,oxygenRemaining:Double,postProcessing:() => Unit = (() => ())) extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Player]{
+    override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = this.copy(value = Bukkit.getServer.getPlayer(value.getUniqueId))
 
   }
 
@@ -41,7 +41,10 @@ object Players {
     parse(Source.fromFile(src).getLines().foldLeft("")(_ + _)).getOrElse(Json.Null).as[SpaceCraftPlayer].getOrElse(DatasetError[SpaceCraftPlayer]())
   }
   implicit class SpPlayerGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit typeTag: TypeTag[A]){
-    def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) src else src.<--[SpaceCraftPlayer]
+    def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) {
+      val p = src.asInstanceOf[SpaceCraftPlayer]
+      p.copy(value = Bukkit.getServer.getPlayer(p.value.getUniqueId))
+    } else src.<-+[SpaceCraftPlayer]
     def addOxy(amt:Int):dataset[SpaceCraftPlayer] = for {
       player <- src.player
     }yield player.copy(oxygenRemaining = player.oxygenRemaining + amt)
