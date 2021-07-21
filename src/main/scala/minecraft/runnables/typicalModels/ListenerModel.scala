@@ -18,17 +18,16 @@ object ListenerModel{
     val serializer:dataset[A with U] => Unit
     val deserializer: () => dataset[A with U]
     def runner(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = try{
+      Thread.sleep(delay)
       println(s"Running:${this.toString}")
       val dat = deserializer()
       if(this.isCancelled) return dat
       val next =  if(shouldRun) dat.-->[U] else dat
       serializer(next)
-      Thread.sleep(delay)
       runner
     }catch{
       case e:Exception =>
         println(e.getMessage)
-        Thread.sleep(delay)
         runner
     }
     def noLoopRunner(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = {

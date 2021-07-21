@@ -7,8 +7,6 @@ import org.bukkit.scheduler.BukkitTask
 object HeightReminder {
 case class HeightReminder(frequency:Double,value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
   val probability = 1
-  override val commandProcessor: Seq[PartialFunction[(String, Array[String]), Boolean]] = Seq()
-  override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq()
   override val name: String = "HeightReminder"
   def apply(bukkitTask:BukkitTask) = this.copy(value = Some(bukkitTask))
   override def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = {

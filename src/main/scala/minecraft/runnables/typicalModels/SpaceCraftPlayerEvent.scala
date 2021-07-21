@@ -27,9 +27,9 @@ object PlayerEvents{
 
 
   trait SpaceCraftPlayerEvent extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Option[BukkitTask]]{
-
-    val commandProcessor:Seq[PartialFunction[(String,Array[String]), Boolean]]
-    val tabComplete : Seq[PartialFunction[(String,Int) , List[String]]]
+//
+//    val commandProcessor:Seq[PartialFunction[(String,Array[String]), Boolean]]
+//    val tabComplete : Seq[PartialFunction[(String,Int) , List[String]]]
     def setFrequency(frequency:Double):SpaceCraftPlayerEvent
     def setProbability(probability:Double):SpaceCraftPlayerEvent
 
@@ -45,8 +45,6 @@ object PlayerEvents{
   }
 
   case object NoEvent extends SpaceCraftPlayerEvent {
-    override val commandProcessor: Seq[PartialFunction[(String, Array[String]), Boolean]] = Seq()
-    override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq()
     override val name: String = "NoEvent"
     override val frequency: Double = 0
     override val probability: Double = 0

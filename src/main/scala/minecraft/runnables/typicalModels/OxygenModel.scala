@@ -32,7 +32,7 @@ object OxygenModel {
       println("Doing thing")
       player.value.sendMessage("oxy remaining: " + player.oxygenRemaining)
       if (
-        player.isOnline && player.isGliding
+        player.isOnline && !player.isOnGround
       ) {
         if (
           player.getInventory.getHelmet != null &&
@@ -64,14 +64,8 @@ object OxygenModel {
       }
     }
 
-    val addOxyTabComplete:PartialFunction[(String, Int), List[String]] =  {
-      case ("addOxy",0) => List("integer > 0")
-    }
     override val name: String = "OxygenDiminishEvent"
-    override val commandProcessor: Seq[PartialFunction[(String, Array[String]), Boolean]] = Seq()
-    override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq(
-      addOxyTabComplete
-    )
+
 
     override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = OxygenDepletionModel(this.siphonAmt,frequency,this.value)
 

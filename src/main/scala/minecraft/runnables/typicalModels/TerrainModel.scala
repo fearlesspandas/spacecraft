@@ -16,8 +16,6 @@ object TerrainModel {
 
   type TerrainGenDeps = Schematics
   case class TerrainGenModel(frequency:Double,probability:Double,schematics:Schematics,value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
-    override val commandProcessor: Seq[PartialFunction[(String, Array[String]), Boolean]] = Seq()
-    override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq()
     override val name: String = "TerrainEvent"
     val schemaLoadCmd = (s:String) => s"schem load $s"
     def apply(bukkitTask:BukkitTask):SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))

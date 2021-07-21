@@ -25,10 +25,6 @@ object RocketChargeModel {
 
     override val name: String = "RocketChargeEvent"
 
-
-    override val commandProcessor: Seq[PartialFunction[(String, Array[String]), Boolean]] = Seq()
-    override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq()
-
     override val probability: Double = 1
 
     override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency =frequency)

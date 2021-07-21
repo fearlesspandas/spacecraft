@@ -8,8 +8,6 @@ import org.bukkit.event.block.Action._
 import org.bukkit.scheduler.BukkitTask
 object RocketExperience {
   case class GainRocketExperience(event:PlayerInteractEvent,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
-    override val commandProcessor: Seq[PartialFunction[(String, Array[String]), Boolean]] = Seq()
-    override val tabComplete: Seq[PartialFunction[(String, Int), List[String]]] = Seq()
     override val name: String = "GainRocketExp"
     override val frequency: Double = 0
     override val probability: Double = 1
