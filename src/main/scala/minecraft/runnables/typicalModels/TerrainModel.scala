@@ -3,7 +3,7 @@ package minecraft.runnables.typicalModels
 import org.bukkit.event.Event
 import Typical.core.dataset._
 import Typical.core.grammar._
-import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
+import minecraft.runnables.typicalModels.PlayerEvents.{MonadicEvent, SpaceCraftPlayerEvent}
 import org.bukkit.event.world.ChunkPopulateEvent
 import Players._
 import org.bukkit.scheduler.BukkitTask
@@ -15,7 +15,8 @@ object TerrainModel {
   case class Schematics(value:Seq[Schematic]) extends ::[Schematics] with produces[Seq[Schematic]]
 
   type TerrainGenDeps = Schematics
-  case class TerrainGenModel(frequency:Double,probability:Double,schematics:Schematics,value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
+  case class TerrainGenModel(frequency:Double,probability:Double,schematics:Schematics,value:Option[BukkitTask] = None)
+    extends MonadicEvent {
     override val name: String = "TerrainEvent"
     val schemaLoadCmd = (s:String) => s"schem load $s"
     def apply(bukkitTask:BukkitTask):SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))

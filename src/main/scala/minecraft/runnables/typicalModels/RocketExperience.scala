@@ -7,7 +7,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.block.Action._
 import org.bukkit.scheduler.BukkitTask
 object RocketExperience {
-  case class GainRocketExperience(event:PlayerInteractEvent,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
+  case class GainRocketExperience(event:PlayerInteractEvent,value:Option[BukkitTask]) extends MonadicEvent {
     override val name: String = "GainRocketExp"
     override val frequency: Double = 0
     override val probability: Double = 1

@@ -5,7 +5,7 @@ import java.time.LocalTime
 import Typical.core.dataset._
 import Typical.core.grammar._
 import io.circe.generic.JsonCodec
-import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
+import minecraft.runnables.typicalModels.PlayerEvents.{MonadicEvent, SpaceCraftPlayerEvent}
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.{ChatColor, Material}
@@ -22,7 +22,7 @@ object OxygenModel {
       OxygenDepletionModel(siphonAmt,breadthDelay,None)
     }
   }
-  case class OxygenDepletionModel(siphonAmt:Int, breadthDelay:Double ,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
+  case class OxygenDepletionModel(siphonAmt:Int, breadthDelay:Double ,value:Option[BukkitTask]) extends MonadicEvent {
     val SIPHON_AMT = siphonAmt
     val frequency = breadthDelay
     val probability = 1

@@ -19,4 +19,13 @@ commands:
       usage: /<command>
       permission: spacecraft.addoxy
       permission-message: You don't have <permission>
-
+    updateprob:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.updateprob
+      permission-message: You don't have <permission>
+    updatefreq:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.updatefreq
+      permission-message: You don't have <permission>

@@ -6,9 +6,12 @@ import Typical.core.grammar._
 import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import org.bukkit.scheduler.BukkitRunnable
-import io.circe.generic.JsonCodec, io.circe.syntax._
+import io.circe.generic.JsonCodec
+import io.circe.syntax._
+
 import scala.reflect.runtime.universe.TypeTag
 import minecraft.events.EventLoop._
+import minecraft.runnables.typicalModels.PlayerGravityModel.PlayerGravityEvent
 object ListenerModel{
   trait ListenerModel[A<:dataset[_],U<:(A ==> (_>:A<:dataset[_]))] extends BukkitRunnable{
     val delay:Long
@@ -27,7 +30,8 @@ object ListenerModel{
       runner
     }catch{
       case e:Exception =>
-        println(e.getMessage)
+        println(s"[SPACECRAFT-ERROR]${e.getMessage}")
+        Thread.sleep(delay)
         runner
     }
     def noLoopRunner(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = {
@@ -53,10 +57,10 @@ object ListenerModel{
                                                                                 )(
     implicit taga:TypeTag[A],
     override val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit
-  ) extends ListenerModel [SpaceCraftPlayer,SpaceCraftPlayerEvent]{
-    val event = src.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent]
+  ) extends ListenerModel [SpaceCraftPlayer with SpaceCraftPlayerEvent,SpaceCraftPlayerEvent]{
+    val event = src.multifetch[SpaceCraftPlayerEvent].get//.asInstanceOf[SpaceCraftPlayerEvent]
     override val delay: Long = event.frequency.toLong
-    override def shouldRun: Boolean = event.probability >= scala.math.random()
+    override def shouldRun: Boolean = event.probability >= scala.math.random() && src.player.get.isOnline
 
     override def run(): Unit = super.run()
 

@@ -8,7 +8,7 @@ import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
-import scala.collection.mutable.Map
+import scala.collection.concurrent.Map
 import scala.reflect.runtime.universe.TypeTag
 object EventManager {
   case class EventManager(
@@ -53,6 +53,8 @@ object EventManager {
     def triggerEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plugin: JavaPlugin):dataset[A] = for{
       eventmanager <- src.eventManager
     }yield src ++ eventmanager.updateEvent(event,player,plugin,event)
+
+
   }
 
 

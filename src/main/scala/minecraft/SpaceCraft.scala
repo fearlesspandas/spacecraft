@@ -8,7 +8,7 @@ import minecraft.events.EventLoopTaskHandler.EventLoopTask
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
-
+import scala.collection.JavaConverters._
 class SpaceCraft extends JavaPlugin{
 
 	val commandProcessor = PlayerCommandProcessor(this)
@@ -28,7 +28,8 @@ class SpaceCraft extends JavaPlugin{
 	}
 
 	override def onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array[String]): util.List[String] = sender match {
-		case p:Player => ???
+		case p:Player => List().asJava
+		case _ => List().asJava
 	}
 
 

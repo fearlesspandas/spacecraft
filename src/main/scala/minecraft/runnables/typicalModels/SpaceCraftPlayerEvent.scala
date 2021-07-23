@@ -26,25 +26,25 @@ object PlayerEvents{
   def filename(taskid:Long):String = s"$snapshotBase${File.separator}$taskid.json"
 
 
-  trait SpaceCraftPlayerEvent extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Option[BukkitTask]]{
+  trait SpaceCraftPlayerEvent extends (SpaceCraftPlayer with SpaceCraftPlayerEvent ==> SpaceCraftPlayer with SpaceCraftPlayerEvent) with produces[Option[BukkitTask]]{
 //
 //    val commandProcessor:Seq[PartialFunction[(String,Array[String]), Boolean]]
 //    val tabComplete : Seq[PartialFunction[(String,Int) , List[String]]]
     def setFrequency(frequency:Double):SpaceCraftPlayerEvent
     def setProbability(probability:Double):SpaceCraftPlayerEvent
-
-    def apply(player:SpaceCraftPlayer):SpaceCraftPlayer
-    override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = for{
-      player <- src.player
-    }yield src ++ apply(player)
-
     def apply(bukkitTask: BukkitTask):SpaceCraftPlayerEvent
     val name:String
     val frequency:Double
     val probability:Double
   }
-
-  case object NoEvent extends SpaceCraftPlayerEvent {
+  trait MonadicEvent extends SpaceCraftPlayerEvent{
+    def apply(player:SpaceCraftPlayer):SpaceCraftPlayer
+    override def apply(src: dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent]): dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = for{
+      player <- src.player
+      event <- src.<--[SpaceCraftPlayerEvent]
+    }yield src ++ apply(player) ++ event
+  }
+  case object NoEvent extends MonadicEvent {
     override val name: String = "NoEvent"
     override val frequency: Double = 0
     override val probability: Double = 0
@@ -90,7 +90,8 @@ object PlayerEvents{
             serializer(src)
             oldEvent.value.map(_.cancel())
             println(s"event is cancelled:${oldEvent.value.map(_.isCancelled)}")
-            val newSrc = (src.deserializer() --> via)
+            val deserialized = src.deserializer()
+            val newSrc = deserialized --> via
             for{
               player <- (newSrc).player
             }yield{

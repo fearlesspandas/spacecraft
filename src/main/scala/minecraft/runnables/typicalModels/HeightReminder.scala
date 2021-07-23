@@ -5,7 +5,7 @@ import minecraft.runnables.typicalModels.PlayerEvents._
 import Players._
 import org.bukkit.scheduler.BukkitTask
 object HeightReminder {
-case class HeightReminder(frequency:Double,value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
+case class HeightReminder(frequency:Double,value:Option[BukkitTask] = None) extends MonadicEvent {
   val probability = 1
   override val name: String = "HeightReminder"
   def apply(bukkitTask:BukkitTask) = this.copy(value = Some(bukkitTask))

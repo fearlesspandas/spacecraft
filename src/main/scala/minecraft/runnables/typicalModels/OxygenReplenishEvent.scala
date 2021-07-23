@@ -5,7 +5,7 @@ import minecraft.runnables.typicalModels.PlayerEvents._
 import org.bukkit.scheduler.BukkitTask
 import Players._
 object OxygenReplenishEvent {
-  case class OxygenReplenishEvent(amount:Double,value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
+  case class OxygenReplenishEvent(amount:Double,value:Option[BukkitTask] = None) extends MonadicEvent {
     val frequency = 0d
     val probability = 0d
     override val name: String = "OxygenReplenishEvent"

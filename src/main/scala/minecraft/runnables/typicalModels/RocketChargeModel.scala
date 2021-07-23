@@ -2,7 +2,7 @@ package minecraft.runnables.typicalModels
 
 import Typical.core.dataset._
 import Typical.core.grammar._
-import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
+import minecraft.runnables.typicalModels.PlayerEvents.{MonadicEvent, SpaceCraftPlayerEvent}
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.inventory.ItemStack
@@ -11,7 +11,7 @@ import org.bukkit.{ChatColor, Material}
 
 import scala.reflect.runtime.universe.TypeTag
 object RocketChargeModel {
-  case class RocketChargeModel(frequency:Double,value:Option[BukkitTask]) extends SpaceCraftPlayerEvent {
+  case class RocketChargeModel(frequency:Double,value:Option[BukkitTask]) extends MonadicEvent{
      def apply(player:SpaceCraftPlayer): SpaceCraftPlayer = {
       if(player.isGliding){
         val inventory = player.getInventory
