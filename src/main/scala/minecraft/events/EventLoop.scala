@@ -35,7 +35,15 @@ object EventLoop {
   val ghastModel = GhastSpawnEvent(entitySpawnRate,0)
   val phantomModel = PhantomSpawnEvent(entitySpawnRate,0)
   val blazeModel = BlazeSpawnEvent(entitySpawnRate,0)
-  val gravityEvent = PlayerGravityEvent(1000,1,Set(),1,20,10,None)
+  val gravityEvent = PlayerGravityEvent(
+    frequency = 1000,
+    probability = 1,
+    knownBlocks = Set(),
+    gravity = 1,
+    maxBlocks = 300,
+    maxTime = 10,
+    value = None
+  )
   val scoreboardman = ScoreboardDisplayModel(5)
   val eventManager:dataset[EventManager] = EventManager(
     TrieMap()

@@ -20,7 +20,7 @@ object PlayerGravityModel {
   case class PlayerGravityEvent(
                                  frequency:Double,
                                  probability:Double  = 1,
-                                 knownBlocks:Set[(Block,Ticks)],
+                                 knownBlocks:Set[Block],
                                  gravity:Double = 1,
                                  maxBlocks:Int = 1000,
                                  maxTime:Int = 3,
@@ -60,40 +60,50 @@ object PlayerGravityModel {
         player.getLocation().subtract(1,1,-1).getBlock.getType.isAir
         )
     }
+    val normals = Set(
+      new LVector(1,0,0),
+      new LVector(1,1,0),
+      new LVector(1,0,1),
+      new LVector(1,1,1),
+      new LVector(1,-1,0),
+      new LVector(1,0,-1),
+      new LVector(0,-1,1)
+    )
+    def expandBlockBlob(blocks:Set[Block]):Set[Block] = {
+      blocks.flatMap(block => {
+        (normals ++ (normals.map(_.multiply(-1))))
+          .map(v => block.getLocation().add(v).getBlock)
+          .filterNot(b => (b.getType.isAir || knownBlocks.contains(b)))
+      })
+    }
     def handleGravity(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,src:dataset[SpaceCraftPlayer with SpaceCraftPlayer]):dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] = {
       val gravityEvent = event.asInstanceOf[PlayerGravityEvent]
-      //player.getWorld.getChunkAt(0,0).get
+      player.sendMessage("~~~")
       val blocksInSight =
         player
-        .getLineOfSight(Material.values().toSet.asJava,100)
+        .getLineOfSight(Material.values().toSet.asJava,maxBlocks)
           .asScala
           .filterNot(
-            b => b.getType.isAir || knownBlocks.exists(b2 => b == b2._1)
+            b => b.getType.isAir || knownBlocks.contains(b)
           )
-          .map((_,LocalTime.now()))
+
       //println(s"blocksInSight:${blocksInSight},${blocksInSight.size}")
-      println(s"knownBlocks = ${gravityEvent.knownBlocks}")
-      val filteredBlocks = gravityEvent.knownBlocks.filterNot(p => p._2.plusSeconds(maxTime).isBefore(LocalTime.now()))
+      println(s"knownBlocks = ${gravityEvent.knownBlocks.size}")
+      val playerlocation = player.getLocation.toVector
+      val filteredBlocks = (gravityEvent.knownBlocks.filterNot(p => {
+        val block = p
+        val distance = block.getLocation().toVector.distance(playerlocation)
+        distance > maxBlocks
+      }) ++ expandBlockBlob(knownBlocks) ++ blocksInSight ).toSeq.sortWith(_.getLocation().distance(player.getLocation) < _.getLocation().distance(player.getLocation)).take(maxBlocks).toSet
       //update known blocks with blocks in sight
+
       val newKnownBlocks =
-        if(filteredBlocks.size < maxBlocks)
-          filteredBlocks  ++ (
-            blocksInSight
-              .dropRight(
-                math.max(blocksInSight.size - (maxBlocks - filteredBlocks.size),0)
-              ).toSet
-            )
-        else filteredBlocks
+        filteredBlocks
 
       println(s"newKNownBocks:${newKnownBlocks.size}")
-      //add vectors for all known blocks
-      val diffvectors:Set[Block] = knownBlocks.map(b => b._1)
-      println(s"diffVectors:${diffvectors.size}")
-      val playerlocation = player.getLocation.toVector
-      val forcevecs = diffvectors.map(vec => {
+      val forcevecs = knownBlocks.map(vec => {
         val origBlockLoc = vec.getLocation().toVector
         val distance = origBlockLoc.distance(playerlocation)
-        player.sendMessage(s"Moving towards:${origBlockLoc}")
         println(s"distance:${distance}")
         val v  = origBlockLoc.subtract(playerlocation)
         val normal = v.normalize()
