@@ -5,7 +5,7 @@ import Typical.core.dataset._
 import Typical.core.grammar._
 import io.circe.{Decoder, Encoder}
 import minecraft.events.{FrequencyMap, ProbabilityMap}
-import Players.{Players, SpaceCraftPlayer, readPlayer, _}
+import Players.{Players, SpaceCraftPlayer, _}
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.Event

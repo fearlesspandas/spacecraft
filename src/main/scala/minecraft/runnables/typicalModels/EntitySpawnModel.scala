@@ -38,7 +38,7 @@ object EntitySpawnModel {
       p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,Int.MaxValue,100))
       p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,Int.MaxValue,100))
       p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,Int.MaxValue,2))
-      p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP,Int.MaxValue,3))
+      //p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP,Int.MaxValue,1))
   }
   case class DragonSpawnEvent(frequency:Double,probability:Double,value:Option[BukkitTask] = None) extends MonadicEvent {
     override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)

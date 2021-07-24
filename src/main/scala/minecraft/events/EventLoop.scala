@@ -18,6 +18,7 @@ import org.bukkit.{Bukkit, Material}
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntityDamageEvent}
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerRespawnEvent}
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.plugin.java.JavaPlugin
@@ -36,12 +37,11 @@ object EventLoop {
   val phantomModel = PhantomSpawnEvent(entitySpawnRate,0)
   val blazeModel = BlazeSpawnEvent(entitySpawnRate,0)
   val gravityEvent = PlayerGravityEvent(
-    frequency = 1000,
+    frequency = 500,
     probability = 1,
     knownBlocks = Set(),
-    gravity = 1,
+    gravity = 2,
     maxBlocks = 300,
-    maxTime = 10,
     value = None
   )
   val scoreboardman = ScoreboardDisplayModel(5)

@@ -28,7 +28,7 @@ class SpaceCraft extends JavaPlugin{
 	}
 
 	override def onTabComplete(sender: CommandSender, command: Command, alias: String, args: Array[String]): util.List[String] = sender match {
-		case p:Player => List().asJava
+		case p:Player => commandProcessor.onTabComplete(p,command,alias,args)
 		case _ => List().asJava
 	}
 

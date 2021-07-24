@@ -17,27 +17,37 @@ import org.bukkit.plugin.java.JavaPlugin
 
 case class PlayerCommandProcessor(plugin:JavaPlugin) {
   def onCommand(sender: Player, command: Command, label: String, args: Array[String]): dataset[EventManager] = command.getName match {
-    case cmd if cmd == "addoxy" =>
+    case "addoxy" =>
       val amt = args.headOption.map(_.toInt).getOrElse(1)
       modifyOxy(amt,sender)
-    case cmd if cmd == "removeOxy" =>
+    case "removeoxy" =>
       val amt = args.headOption.map(_.toInt).getOrElse(1)
       modifyOxy(amt,sender)
-    case cmd if cmd == "showevents" =>
+    case "showevents" =>
       sender.sendMessage(eventManager.getValue.value.keys.toString);
       eventManager
-    case cmd if cmd == "updateprob" =>
+    case "updateprob" =>
       val eventName = args.headOption.getOrElse("Nothing")
       val prob = args.tail.headOption.map(_.toDouble).getOrElse(0d)
       updateProb(prob,eventName,sender)
-    case cmd if cmd == "updatefreq" =>
+    case "updatefreq" =>
       val eventName =  args.headOption.getOrElse("Nothing")
       val freq = args.tail.headOption.map(_.toDouble).getOrElse(0d)
       updateFrequency(freq,eventName,sender)
+    case "gravitystrength" =>
+      val value = args.headOption.map(_.toDouble).getOrElse(1d)
+      updateGravityStrength(value,sender)
     case cmd => sender.sendMessage(s"No command found for ${cmd}")
       eventManager
   }
 
+  def updateGravityStrength(value:Double,player:Player):dataset[EventManager] = for{
+    em <- eventManager
+    spcplayer <- em.value.getOrElse((gravityEvent.name,player.getUniqueId),throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
+  }yield{
+    eventManager
+      .updateEvent(gravityEvent.copy(gravity = value),spcplayer,plugin)
+  }
   def modifyOxy( amt:Double,sender:Player):dataset[EventManager] = for{
     em <- eventManager
     spcplayer <- em.value.getOrElse((oxyModel.name,sender.getUniqueId),throw new Error(s"No OxygenModel found for ${sender.getDisplayName}")).player
@@ -57,8 +67,8 @@ case class PlayerCommandProcessor(plugin:JavaPlugin) {
     for {
       event <- baseTasks.find(_.name == eventName).map(_.setFrequency(value)).fromOption
       em <- eventManager
-      spcplayer <- em.value.getOrElse((event.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
-    } yield em.updateEvent(event, spcplayer, plugin)
+      spcplayer <- em.value.getOrElse((event.name,player.getUniqueId),throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
+    }yield em.updateEvent(event,spcplayer,plugin)
   }
   def onTabComplete(sender: Player, command: Command, alias: String, args: Array[String]): util.List[String] = command.getName match {
     case "updateprob" => args.size match {
@@ -68,11 +78,19 @@ case class PlayerCommandProcessor(plugin:JavaPlugin) {
     }
     case "updatefreq" => args.size match {
       case 1 =>baseTasks.filter(_.name.toUpperCase().contains(args.head.toUpperCase())).map(_.name).toList.asJava
-      case 2 => List("""0 < number < 1 """).asJava
+      case 2 => List("""numberOfTicks""").asJava
       case _ => List().asJava
     }
     case "addoxy" => args.size match {
-      case 1 => List("""0 < number < 1 """).asJava
+      case 1 => List(""" amount:Integer """).asJava
+      case _ => List().asJava
+    }
+    case "removeoxy" => args.size match {
+      case 1 => List("""amount:Integer """).asJava
+      case _ => List().asJava
+    }
+    case "gravitystrength" => args.size match {
+      case 1 => List("""value > 0  (unless you want to)""").asJava
       case _ => List().asJava
     }
     case _ => List().asJava

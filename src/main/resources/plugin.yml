@@ -19,6 +19,11 @@ commands:
       usage: /<command>
       permission: spacecraft.addoxy
       permission-message: You don't have <permission>
+    removeoxy:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.removeoxy
+      permission-message: You don't have <permission>
     updateprob:
       description: sets the probability of a spacecraft event.
       usage: /<command>
@@ -28,4 +33,9 @@ commands:
       description: sets the probability of a spacecraft event.
       usage: /<command>
       permission: spacecraft.updatefreq
+      permission-message: You don't have <permission>
+    gravitystrength:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.gravitystrength
       permission-message: You don't have <permission>

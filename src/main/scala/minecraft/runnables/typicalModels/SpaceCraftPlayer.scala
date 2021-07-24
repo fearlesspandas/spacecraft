@@ -9,10 +9,7 @@ import org.bukkit.entity.Player
 import OxygenModel._
 import RocketChargeModel._
 import io.circe.{Decoder, Encoder}
-import io.circe.generic._
-import io.circe.syntax._
-import io.circe._
-import io.circe.parser._
+
 import org.bukkit.Bukkit
 
 import scala.io.Source
@@ -33,17 +30,18 @@ object Players {
     }
   }
   case class SpaceCraftPlayer(value:Player,oxygenRemaining:Double,postProcessing:() => Unit = (() => ())) extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Player]{
-    override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = this.copy(value = Bukkit.getServer.getPlayer(value.getUniqueId))
+    override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = {
+      val currentPlayer = Bukkit.getServer.getPlayer(value.getUniqueId)
+      if(currentPlayer == null) DatasetError[SpaceCraftPlayer](new Error("No Player Found")) else this.copy(value = currentPlayer)
+    }
 
   }
 
-  def readPlayer(src:String):dataset[SpaceCraftPlayer] = {
-    parse(Source.fromFile(src).getLines().foldLeft("")(_ + _)).getOrElse(Json.Null).as[SpaceCraftPlayer].getOrElse(DatasetError[SpaceCraftPlayer]())
-  }
   implicit class SpPlayerGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit typeTag: TypeTag[A]){
     def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) {
       val p = src.asInstanceOf[SpaceCraftPlayer]
-      p.copy(value = Bukkit.getServer.getPlayer(p.value.getUniqueId))
+      val currentPlayer = Bukkit.getServer.getPlayer(p.value.getUniqueId)
+      if(player == null ) p else p.copy(value = currentPlayer)
     } else src.<-+[SpaceCraftPlayer]
     def addOxy(amt:Int):dataset[SpaceCraftPlayer] = for {
       player <- src.player

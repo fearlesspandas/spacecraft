@@ -25,12 +25,15 @@ object ListenerModel{
       println(s"Running:${this.toString}")
       val dat = deserializer()
       if(this.isCancelled) return dat
-      val next =  if(shouldRun) dat.-->[U] else dat
+      val nextMaybe =  if(shouldRun) dat.-->[U] else dat
+      val next = if(nextMaybe.isEmpty) dat else nextMaybe
+      if(nextMaybe.isEmpty){println(s"[SPACECRAFT-ERROR]:${nextMaybe}")}
       serializer(next)
       runner
     }catch{
       case e:Exception =>
-        println(s"[SPACECRAFT-ERROR]${e.getMessage}")
+        println(s"[SPACECRAFT-ERROR]${e.getCause}\n")
+        e.printStackTrace()
         Thread.sleep(delay)
         runner
     }
