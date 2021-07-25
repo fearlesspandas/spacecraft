@@ -40,8 +40,12 @@ object Players {
   implicit class SpPlayerGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit typeTag: TypeTag[A]){
     def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) {
       val p = src.asInstanceOf[SpaceCraftPlayer]
-      val currentPlayer = Bukkit.getServer.getPlayer(p.value.getUniqueId)
-      if(player == null ) p else p.copy(value = currentPlayer)
+      if(p.value == null) DatasetError[SpaceCraftPlayer](new Error("Player is null"))
+      else{
+        val currentPlayer = Bukkit.getServer.getPlayer(p.value.getUniqueId)
+        if(currentPlayer == null )  DatasetError[SpaceCraftPlayer](new Error("Player is null")) else p.copy(value = currentPlayer)
+      }
+
     } else src.<-+[SpaceCraftPlayer]
     def addOxy(amt:Int):dataset[SpaceCraftPlayer] = for {
       player <- src.player

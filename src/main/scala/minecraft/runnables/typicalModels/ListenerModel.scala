@@ -22,14 +22,18 @@ object ListenerModel{
     val deserializer: () => dataset[A with U]
     def runner(implicit tagu:TypeTag[U],taga:TypeTag[A]):dataset[A] = try{
       Thread.sleep(delay)
-      println(s"Running:${this.toString}")
       val dat = deserializer()
+      println(s"Running:${dat}")
       if(this.isCancelled) return dat
       val nextMaybe =  if(shouldRun) dat.-->[U] else dat
       val next = if(nextMaybe.isEmpty) dat else nextMaybe
-      if(nextMaybe.isEmpty){println(s"[SPACECRAFT-ERROR]:${nextMaybe}")}
-      serializer(next)
-      runner
+      if(nextMaybe.isEmpty){
+        println(s"[SPACECRAFT-ERROR]:${nextMaybe.asInstanceOf[DatasetError[_]].value.headOption.map(_.getMessage)}")
+        dat
+      }else{
+        serializer(next)
+        runner
+      }
     }catch{
       case e:Exception =>
         println(s"[SPACECRAFT-ERROR]${e.getCause}\n")
@@ -43,16 +47,6 @@ object ListenerModel{
       serializer(next)
       next
     }
-    def writeFile(text:String,taskId:Long) = {
-      val base = "spacecraftSnapshots"
-      val dir = new File(base)
-      val file = new File(s"$base${File.separator}${taskId}.json")
-      dir.mkdirs()
-      file.createNewFile()
-      val bw = new BufferedWriter(new FileWriter(file))
-      bw.write(text)
-      bw.close()
-    }
   }
 
   implicit class ListenerGrammer[A<:SpaceCraftPlayerEvent with SpaceCraftPlayer](
@@ -61,17 +55,18 @@ object ListenerModel{
     implicit taga:TypeTag[A],
     override val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit
   ) extends ListenerModel [SpaceCraftPlayer with SpaceCraftPlayerEvent,SpaceCraftPlayerEvent]{
-    val event = src.multifetch[SpaceCraftPlayerEvent].get//.asInstanceOf[SpaceCraftPlayerEvent]
-    override val delay: Long = event.frequency.toLong
-    override def shouldRun: Boolean = event.probability >= scala.math.random() && src.player.get.isOnline
+    val frequency = src.<--[SpaceCraftPlayerEvent].biMap(_ => 3000d)(_.get.frequency)
+    val probability = src.<--[SpaceCraftPlayerEvent].biMap(_ => 0d)(_.get.probability)
+    override val delay: Long = frequency.toLong
+    override def shouldRun: Boolean = probability >= scala.math.random() && src.player.get.isOnline && (!this.isCancelled)
 
     override def run(): Unit = super.run()
 
     override val deserializer: () => dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = () => for{
       player <- src.player
       em <- eventManager
+      event <- src.<--[SpaceCraftPlayerEvent]
     }yield{
-      val event = src.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent]
       em.value((event.name,player.getUniqueId))
     }
   }

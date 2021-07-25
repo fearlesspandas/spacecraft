@@ -31,14 +31,33 @@ object EventLoop {
   val rocketChargeModel = RocketChargeModel(50000,None)
   val heightReminder = HeightReminder(5000)
   val oxyReplenishModel = OxygenReplenishEvent(3,None)
-  val entitySpawnRate = 50000000
-  val dragonModel = DragonSpawnEvent(entitySpawnRate,0)
-  val ghastModel = GhastSpawnEvent(entitySpawnRate,0)
-  val phantomModel = PhantomSpawnEvent(entitySpawnRate,0)
-  val blazeModel = BlazeSpawnEvent(entitySpawnRate,0)
+  val entitySpawnRate = 60000 * 5
+  val dragonModel = DragonSpawnEvent(entitySpawnRate,0.000001)
+  val ghastModel = GhastSpawnEvent(entitySpawnRate,0.002)
+  val phantomModel = PhantomSpawnEvent(entitySpawnRate,0.05)
+  val blazeModel = BlazeSpawnEvent(entitySpawnRate,0.07)
   val gravityEvent = PlayerGravityEvent(
-    frequency = 500,
+    frequency = 300,
     probability = 1,
+    "PlayerGravityEvent1",
+    knownBlocks = Set(),
+    gravity = 2,
+    maxBlocks = 300,
+    value = None
+  )
+  val gravityEvent2 = PlayerGravityEvent(
+    frequency = 300,
+    probability = 1,
+    "PlayerGravityEvent2",
+    knownBlocks = Set(),
+    gravity = 2,
+    maxBlocks = 300,
+    value = None
+  )
+  val gravityEvent3 = PlayerGravityEvent(
+    frequency = 300,
+    probability = 1,
+    "PlayerGravityEvent3",
     knownBlocks = Set(),
     gravity = 2,
     maxBlocks = 300,
@@ -58,22 +77,23 @@ object EventLoop {
     oxyModel,
     rocketChargeModel,
     heightReminder,
-    gravityEvent
+    gravityEvent,
+    gravityEvent2,
+    gravityEvent3
   ) //++ entitySpawnTasks
-  implicit val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit = src => src.multifetch[SpaceCraftPlayerEvent].fold(_ => throw new Error("issue updating event manager"))(
-    d => {
-     val event = d.asInstanceOf[SpaceCraftPlayerEvent]
+  implicit val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit = src =>
       //if(event.isInstanceOf[PlayerGravityEvent]) println(s"serialized blocks:${event.asInstanceOf[PlayerGravityEvent].knownBlocks}")
       for{
         player <- src.player
+        event <- src.<--[SpaceCraftPlayerEvent]
         em <- eventManager
       }yield {
         em.eventStack.push(player.postProcessing)
         em.value.update((event.name,player.getUniqueId),src)
         em
       }
-    }
-  )
+
+
 
 
   class EventLoopListener(plug:JavaPlugin) extends Listener {
@@ -84,7 +104,7 @@ object EventLoop {
       event.getPlayer.setGravity(false)
       val newplayer = SpaceCraftPlayer(event.getPlayer,100)
       EntitySpawnModel.fixEntityFlight(newplayer)
-      baseTasks.foreach(e => eventManager.updateEvent(e,newplayer,plug))
+      baseTasks.foreach(e => {eventManager.updateEvent(e,newplayer,plug);Thread.sleep(500)})
     }
     @EventHandler
     def onPlayerSpawn(event:PlayerRespawnEvent):Unit =
@@ -104,6 +124,11 @@ object EventLoop {
     def replenishOxygenOnBlockDestroy(event:BlockBreakEvent):Unit = {
       val player = event.getPlayer
       event.getBlock.getType match {
+        case m if(m.isFuel) =>
+          for {
+            em <- eventManager
+            spcplayer <- em.value.getOrElse((oxyModel.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
+          } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
         case Material.BLUE_ICE | Material.ICE | Material.FROSTED_ICE =>
           for {
             em <- eventManager

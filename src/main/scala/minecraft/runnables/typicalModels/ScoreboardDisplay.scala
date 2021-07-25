@@ -27,13 +27,11 @@ object ScoreboardDisplay {
       val scoreboard =
         Bukkit.getScoreboardManager.getMainScoreboard
       val maybeObjective = scoreboard.getObjective("Vitals")
-      val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"Vitals","dummy",s"${ChatColor.RED}Vitals") else maybeObjective
-      val maybeTeam = scoreboard.getTeam(player.getDisplayName)
-      val team = if(maybeTeam == null) scoreboard.registerNewTeam(player.getDisplayName) else maybeTeam
-      val maybeEntry = team.getEntries.contains(player.getDisplayName)
-      if(!maybeEntry) team.addEntry(player.getDisplayName)
+      val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"Vitals","dummy",s"Vitals") else maybeObjective
+      println(s"registeringObjective:${objective != null}")
       val dat = oxyModel.deserializer()
       val oxyremaining = dat.player.get.oxygenRemaining
+      println(s"data intact:${dat.isEmpty}")
       objective.getScore(player.getDisplayName).setScore((oxyremaining).floor.toInt)
     }
   }

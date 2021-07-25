@@ -29,8 +29,6 @@ object OxygenModel {
 
     override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
     def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = {
-      println("Doing thing")
-      player.value.sendMessage("oxy remaining: " + player.oxygenRemaining)
       if (
         player.isOnline && !player.isOnGround
       ) {
@@ -38,21 +36,24 @@ object OxygenModel {
           player.getInventory.getHelmet != null &&
             player.getInventory.getHelmet.getType == Material.DIAMOND_HELMET
         ) {
-          val remaining = player.oxygenRemaining
-          if (remaining <= 0 ) {
-            player.value.sendMessage(s"${ChatColor.LIGHT_PURPLE} No oxy remaining")
-            val postProcess = () => player.value.damage(player.getHealthScale / 2)
-            player.copy(postProcessing = postProcess)
-          }
-          else {
+          player match {
+            case p if p.isSwimming =>
+              val res = player.copy(oxygenRemaining = player.oxygenRemaining + siphonAmt,postProcessing = () => ())
+              player.value.sendMessage(s"${ChatColor.GREEN} oxy:${res.oxygenRemaining}")
+              res
+            case p if player.oxygenRemaining <= 0 =>
+              player.value.sendMessage(s"${ChatColor.LIGHT_PURPLE} No oxy remaining")
+              val postProcess = () => player.value.damage(player.getHealthScale / 2)
+              player.copy(postProcessing = postProcess)
+            case _ =>
               val res = player.copy(oxygenRemaining = player.oxygenRemaining - siphonAmt,postProcessing = () => ())
               player.value.sendMessage(s"${ChatColor.AQUA} oxy:${res.oxygenRemaining}")
               res
           }
+
         } else {
 
           val postProcess = () => {
-            player.value.sendMessage("Damaged by Process")
             player.value.damage(player.getHealth/2)
           }
           player.value.sendMessage("Put on a diamond helmet or you'll suffocate")
