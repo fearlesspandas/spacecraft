@@ -3,7 +3,7 @@ import java.util.UUID
 
 import Typical.core.dataset._
 import Typical.core.grammar._
-import minecraft.runnables.typicalModels.{EntitySpawnModel, ScoreboardDisplay}
+import minecraft.runnables.typicalModels.EntitySpawnModel
 import minecraft.runnables.typicalModels.EntitySpawnModel.{BlazeSpawnEvent, DragonSpawnEvent, GhastSpawnEvent, PhantomSpawnEvent}
 import minecraft.runnables.typicalModels.EventManager.EventManager
 import minecraft.runnables.typicalModels.HeightReminder.HeightReminder
@@ -13,7 +13,6 @@ import minecraft.runnables.typicalModels.PlayerEvents._
 import minecraft.runnables.typicalModels.PlayerGravityModel.PlayerGravityEvent
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
-import minecraft.runnables.typicalModels.ScoreboardDisplay.ScoreboardDisplayModel
 import org.bukkit.{Bukkit, Material}
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
@@ -22,8 +21,9 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerRespawnEvent}
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.scoreboard.Score
+import org.bukkit.scoreboard.{DisplaySlot, Score}
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
+import minecraft.runnables.typicalModels.ListenerModel._
 
 import scala.collection.concurrent.TrieMap
 object EventLoop {
@@ -63,7 +63,6 @@ object EventLoop {
     maxBlocks = 300,
     value = None
   )
-  val scoreboardman = ScoreboardDisplayModel(5)
   val eventManager:dataset[EventManager] = EventManager(
     TrieMap()
   )
@@ -81,6 +80,27 @@ object EventLoop {
     gravityEvent2,
     gravityEvent3
   ) //++ entitySpawnTasks
+
+
+  def handleScore(player:Player,objectiveName:String,model:SpaceCraftPlayerEvent,deriveScore:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Double):Unit = {
+    val scoreboard =
+      Bukkit.getScoreboardManager.getMainScoreboard
+    val maybeObjective = scoreboard.getObjective(objectiveName)
+    val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"${objectiveName}","dummy",s"${objectiveName}") else maybeObjective
+    //println(s"registeringObjective:${objective != null}")
+    for{
+      em <- eventManager
+    }yield{
+      val dat = em.getTask(player,model.name)
+      //println(s"taskplayer:${datplayer}")
+      val oxyremaining = deriveScore(dat)
+
+      //println(s"data intact:${if(dat.isEmpty) dat else !dat.isEmpty}")
+      objective.getScore(player.getDisplayName).setScore((oxyremaining).floor.toInt)
+      em
+    }
+
+  }
   implicit val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit = src =>
       //if(event.isInstanceOf[PlayerGravityEvent]) println(s"serialized blocks:${event.asInstanceOf[PlayerGravityEvent].knownBlocks}")
       for{
@@ -104,11 +124,25 @@ object EventLoop {
       event.getPlayer.setGravity(false)
       val newplayer = SpaceCraftPlayer(event.getPlayer,100)
       EntitySpawnModel.fixEntityFlight(newplayer)
-      baseTasks.foreach(e => {eventManager.updateEvent(e,newplayer,plug);Thread.sleep(500)})
+      baseTasks.foreach(e => {
+        val spcplayer = eventManager.getTask(event.getPlayer,e.name).player.fold(_ => newplayer)(d => d).get
+        val spcevent = eventManager.getTask(event.getPlayer,e.name).<--[SpaceCraftPlayerEvent].fold[SpaceCraftPlayerEvent](_ => e)(ev => ev).get
+        eventManager.updateEvent(spcevent,spcplayer,plug);
+        Thread.sleep(150)
+      })
     }
     @EventHandler
-    def onPlayerSpawn(event:PlayerRespawnEvent):Unit =
+    def onPlayerSpawn(event:PlayerRespawnEvent):Unit = {
       EntitySpawnModel.fixEntityFlight(event.getPlayer)
+      for{
+        em <- eventManager
+        spcevent <- eventManager.getTask(event.getPlayer,oxyModel.name).<--[SpaceCraftPlayerEvent]
+        spcplayer <- em.getTask(event.getPlayer,oxyModel.name).player
+      }yield {
+        val oxym = spcevent.asInstanceOf[OxygenDepletionModel]
+        eventManager.updateEvent(oxym,spcplayer,plug,OxygenReplenishEvent(100 - spcplayer.oxygenRemaining))
+      }
+    }
 
     @EventHandler
     def replenishOxyOnDamage(event:EntityDamageByEntityEvent):Unit = {

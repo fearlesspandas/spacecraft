@@ -15,8 +15,10 @@ import Typical.core.grammar._
 import org.bukkit.entity.Player
 import org.bukkit.inventory.StonecutterInventory
 import org.bukkit.potion.PotionEffectType
+import minecraft.utils.Surroundings._
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.HashMap
 object PlayerGravityModel {
   type Ticks = LocalTime
   type SeedBlocks = Seq[Block]
@@ -27,26 +29,24 @@ object PlayerGravityModel {
                                  knownBlocks:Set[Block],
                                  gravity:Double = 1,
                                  maxBlocks:Int = 1000,
+                                 lastForceVector:LVector = new LVector(0,0,0),
+                                 materialDensityMap:Map[Material,Double] = Material.values().map(m => m -> materialDensity(m)).toMap,
                                  value:Option[BukkitTask] = None
                                ) extends SpaceCraftPlayerEvent {
     override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)
     override def setProbability(probability: Double): SpaceCraftPlayerEvent = this.copy(probability = probability)
     override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
-
-    val materials = Seq(Material.GLASS,Material.STONE,Material.DARK_OAK_WOOD,Material.BLACK_WOOL)
-
     override def apply(src: dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent]): dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = for{
       player <- src.player
       event <- src.<--[SpaceCraftPlayerEvent]
     }yield{
-      if(isStanding(player) || (!player.isOnline) || blocksBelow(player.getLocation(),10).nonEmpty || blocksAbove(player.getLocation(),5).nonEmpty){
+      if(isStanding(player) || (!player.isOnline) || blocksBelow(player.getLocation(),15).nonEmpty || blocksAbove(player.getLocation(),10).nonEmpty){
         if(player.isOnline) {
           player.value.setGravity(true);
           val gravevent = event.asInstanceOf[PlayerGravityEvent]
-          val newKNown = (gravevent.knownBlocks ++ expandBlockBlob(blocksBelow(player.getLocation,10).toSet)).toSeq.sortWith((a,b) =>
-            (a !=null && b == null) ||
-              materialDensity(a.getType)/ a.getLocation().distance(player.getLocation) >
-                materialDensity(b.getType) / b.getLocation().distance(player.getLocation)
+          val newKNown = (gravevent.knownBlocks ++ expandBlockBlob(blocksBelow(player.getLocation,10).toSet)).filterNot(_==null).toSeq.sortWith((a,b) =>
+              materialDensityMap(a.getType)/ a.getLocation().distance(player.getLocation) >
+                materialDensityMap(b.getType) / b.getLocation().distance(player.getLocation)
           ).take(maxBlocks).toSet
           src.++[SpaceCraftPlayerEvent,PlayerGravityEvent](gravevent.copy(knownBlocks = newKNown))
         }else
@@ -59,42 +59,6 @@ object PlayerGravityModel {
 
     }
 
-    def isConcrete(mat:Material):Boolean = {
-      mat.toString.toUpperCase().contains("CONCRETE")
-    }
-    def isGlass(mat:Material):Boolean = {
-      mat.toString.toUpperCase.contains("GLASS")
-    }
-    def isClay(mat:Material):Boolean = {
-      mat.toString.toUpperCase().contains("TERRACOTTA")
-    }
-    import Material._
-    def materialDensity(m:Material):Double= m match {
-      case mat if mat.isFuel => 0.5
-      case DIRT | COARSE_DIRT | SAND | RED_SAND => 1
-      case STONE | BRICKS | NETHER_BRICK | CLAY | COBBLESTONE | SANDSTONE | SANDSTONE_WALL  => materialDensity(DIRT) * 2
-      case COAL_ORE => materialDensity(STONE)/2
-      case LAPIS_ORE => materialDensity(STONE) * 1.5
-      case IRON_ORE => materialDensity(STONE) * 2
-      case GOLD_ORE | SOUL_SAND => materialDensity(IRON_ORE) * 2
-      case DIAMOND_ORE => materialDensity(GOLD_ORE) * 2
-      case REDSTONE_ORE => materialDensity(DIAMOND_ORE) * 2
-      case COAL_BLOCK => materialDensity(COAL_ORE) * 9
-      case LAPIS_BLOCK => materialDensity(LAPIS_ORE) * 9
-      case IRON_BLOCK => materialDensity(IRON_ORE)*9
-      case GOLD_BLOCK => materialDensity(GOLD_ORE) * 9
-      case DIAMOND_BLOCK => materialDensity(DIAMOND_ORE) * 9
-      case REDSTONE_BLOCK => materialDensity(REDSTONE_ORE) * 64
-      case OBSIDIAN =>   100
-      case BEDROCK => 50
-      case _ if(isConcrete(m)) => materialDensity(STONE)
-      case _ if(isClay(m)) => materialDensity(CLAY)
-      case _ if(isGlass(m)) => materialDensity(SAND) * 1.5
-      case _ if m.isSolid => 1
-      case _ => 0
-
-
-    }
     def isStanding(player:Player):Boolean = {
       !(player.getLocation().subtract(0,1,0).getBlock.getType.isAir &&
         player.getLocation().subtract(1,1,0).getBlock.getType.isAir &&
@@ -218,26 +182,25 @@ object PlayerGravityModel {
           .filterNot(
             b => b.getType.isAir || gravityEvent.knownBlocks.contains(b)
           )
-      println(s"knownBlocks = ${gravityEvent.knownBlocks.size}")
+      //println(s"knownBlocks = ${gravityEvent.knownBlocks.size}")
       val playerlocation = player.getLocation.toVector
 
       val filteredBlocks = (
           gravityEvent.knownBlocks ++
           expandBlockBlob(gravityEvent.knownBlocks) ++
-          expandBlockBlobDepthFirstSet(gravityEvent.knownBlocks,30) ++
+          expandBlockBlobDepthFirstSet(gravityEvent.knownBlocks,20) ++
           expandBlockBlob(blocksInSight.toSet)  ++
-            getSurroundingBlocks(player,searchCap,prorata)
-        )//.toSet
-              //)
+            //expandBlockBlob(
+              getSurroundingBlocks(player,searchCap,prorata).toSet
             //)
+        )
       .toSeq.sortWith((a,b) =>
         (a !=null && b == null) ||
-        materialDensity(a.getType)/ a.getLocation().distance(player.getLocation) >
-          materialDensity(b.getType) / b.getLocation().distance(player.getLocation)
+        materialDensityMap(a.getType)/ a.getLocation().distance(player.getLocation) >
+          materialDensityMap(b.getType) / b.getLocation().distance(player.getLocation)
       ).take(maxBlocks).toSet
-      //update known blocks with blocks in sight
 
-      println(s"newKNownBocks:${filteredBlocks.size}")
+      //println(s"newKNownBocks:${filteredBlocks.size}")
       val forcevecs = filteredBlocks.foldLeft(new LVector(0,0,0))((accumVec,vec) => {
         val origBlockLoc = vec.getLocation().toVector
         val distance = origBlockLoc.distance(playerlocation)
@@ -245,7 +208,7 @@ object PlayerGravityModel {
         val v  = origBlockLoc.subtract(playerlocation)
         val normal = v.normalize()
         //println(s"normal:${normal}")
-        val scaler = -2*gravityScaler*(materialDensity(vec.getType))/(distance * distance)
+        val scaler = -2*gravityScaler*(materialDensityMap(vec.getType))/(distance * distance)
         val res =
           if(distance< 10) new LVector(0,0,0) else
           normal.multiply(scaler)
@@ -255,9 +218,8 @@ object PlayerGravityModel {
 
       val currentVelocity = player.getVelocity
       if(forcevecs.length() > 0){player.setVelocity(currentVelocity.subtract(forcevecs))}
-      player.sendMessage(s"gravityField:${forcevecs.length()}")
-      println(s"updating gravity${forcevecs}")
-      src ++[SpaceCraftPlayerEvent,PlayerGravityEvent] gravityEvent.copy(knownBlocks = filteredBlocks) //++ player//.copy(postProcessing = afterEffects)
+     // println(s"updating gravity${forcevecs}")
+      src ++[SpaceCraftPlayerEvent,PlayerGravityEvent] gravityEvent.copy(knownBlocks = filteredBlocks,lastForceVector = forcevecs) //++ player//.copy(postProcessing = afterEffects)
     }
 
   }

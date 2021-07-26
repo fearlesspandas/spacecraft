@@ -39,3 +39,18 @@ commands:
       usage: /<command>
       permission: spacecraft.gravitystrength
       permission-message: You don't have <permission>
+    gravitymeter:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.gravitymeter
+      permission-message: You don't have <permission>
+    oxymeter:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.oxymeter
+      permission-message: You don't have <permission>
+    giveplayercompass:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.oxymeter
+      permission-message: You don't have <permission>

@@ -39,7 +39,6 @@ object EventManager {
       for{
         taskplayer <- updatedEventTask.player
       }yield{
-        taskplayer.sendMessage(s"EventUpdated:${updatedEventTask.multifetch[SpaceCraftPlayerEvent].asInstanceOf[SpaceCraftPlayerEvent].value}")
         player
       }
       println(s"isEmpty:${eventManager.isEmpty}")
@@ -49,7 +48,9 @@ object EventManager {
       println(s"newmanager isemtpy:${res.isEmpty}")
       res
     }
-
+  def getTask(player:Player,task:String):dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = for{
+    em <- src.eventManager
+  }yield em.value.getOrElse((task,player.getUniqueId),DatasetError[SpaceCraftPlayerEvent with SpaceCraftPlayer](new Error(s"No task ${task} for player ${player.getDisplayName}")))
     def triggerEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plugin: JavaPlugin):dataset[A] = for{
       eventmanager <- src.eventManager
     }yield src ++ eventmanager.updateEvent(event,player,plugin,event)

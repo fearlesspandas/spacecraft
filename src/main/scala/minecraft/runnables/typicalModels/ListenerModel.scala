@@ -58,7 +58,7 @@ object ListenerModel{
     val frequency = src.<--[SpaceCraftPlayerEvent].biMap(_ => 3000d)(_.get.frequency)
     val probability = src.<--[SpaceCraftPlayerEvent].biMap(_ => 0d)(_.get.probability)
     override val delay: Long = frequency.toLong
-    override def shouldRun: Boolean = probability >= scala.math.random() && src.player.get.isOnline && (!this.isCancelled)
+    override def shouldRun: Boolean = probability >= scala.math.random() && src.player.biMap(_ => false)( _.get.isOnline) && (!this.isCancelled)
 
     override def run(): Unit = super.run()
 
