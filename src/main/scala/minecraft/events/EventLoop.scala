@@ -7,6 +7,7 @@ import minecraft.runnables.typicalModels.EntitySpawnModel
 import minecraft.runnables.typicalModels.EntitySpawnModel.{BlazeSpawnEvent, DragonSpawnEvent, GhastSpawnEvent, PhantomSpawnEvent}
 import minecraft.runnables.typicalModels.EventManager.EventManager
 import minecraft.runnables.typicalModels.HeightReminder.HeightReminder
+import minecraft.runnables.typicalModels.ItemGravityModel.ItemGravityEvent
 import minecraft.runnables.typicalModels.OxygenModel.OxygenDepletionModel
 import minecraft.runnables.typicalModels.OxygenReplenishEvent.OxygenReplenishEvent
 import minecraft.runnables.typicalModels.PlayerEvents._
@@ -16,14 +17,15 @@ import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
 import org.bukkit.{Bukkit, Material}
 import org.bukkit.entity.Player
 import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntityDamageEvent}
+import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntityDamageEvent, EntitySpawnEvent}
 import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.event.player.{PlayerJoinEvent, PlayerRespawnEvent}
+import org.bukkit.event.player.{PlayerDropItemEvent, PlayerJoinEvent, PlayerRespawnEvent}
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.{DisplaySlot, Score}
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
 import minecraft.runnables.typicalModels.ListenerModel._
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause
 
 import scala.collection.concurrent.TrieMap
 object EventLoop {
@@ -36,6 +38,8 @@ object EventLoop {
   val ghastModel = GhastSpawnEvent(entitySpawnRate,0.002)
   val phantomModel = PhantomSpawnEvent(entitySpawnRate,0.05)
   val blazeModel = BlazeSpawnEvent(entitySpawnRate,0.07)
+  val itemGravityEvent = ItemGravityEvent("ItemGravityEvent1",100,1,2,Seq())
+  val itemGravityEvent2 = ItemGravityEvent("ItemGravityEvent2",100,1,2,Seq())
   val gravityEvent = PlayerGravityEvent(
     frequency = 300,
     probability = 1,
@@ -78,8 +82,11 @@ object EventLoop {
     heightReminder,
     gravityEvent,
     gravityEvent2,
-    gravityEvent3
+    gravityEvent3,
+    itemGravityEvent,
+    itemGravityEvent2
   ) //++ entitySpawnTasks
+
 
 
   def handleScore(player:Player,objectiveName:String,model:SpaceCraftPlayerEvent,deriveScore:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Double):Unit = {
@@ -132,6 +139,16 @@ object EventLoop {
       })
     }
     @EventHandler
+    def crashDamageHandler(event:EntityDamageEvent):Unit = event.getCause match {
+      case DamageCause.FLY_INTO_WALL =>
+        event.getEntity match {
+          case p:Player if(p.getInventory.getBoots.getType == Material.DIAMOND_BOOTS) => event.setCancelled(true)
+          case _ => ()
+        }
+      case _ => ()
+
+    }
+    @EventHandler
     def onPlayerSpawn(event:PlayerRespawnEvent):Unit = {
       EntitySpawnModel.fixEntityFlight(event.getPlayer)
       for{
@@ -143,7 +160,23 @@ object EventLoop {
         eventManager.updateEvent(oxym,spcplayer,plug,OxygenReplenishEvent(100 - spcplayer.oxygenRemaining))
       }
     }
-
+    @EventHandler
+    def floatItems(event:PlayerDropItemEvent):Unit = {
+      val player = event.getPlayer
+      if (!player.isOnGround){
+        event.getItemDrop.setGravity(false);
+      val ievent = Seq(itemGravityEvent,itemGravityEvent2)((math.random * 2).floor.toInt)
+      for{
+        em <- eventManager
+        task <- em.getTask(player,ievent.name).<--[SpaceCraftPlayerEvent]
+        spcPlayer <- em.getTask(player,ievent.name).player
+      }yield {
+        val gravTask = task.asInstanceOf[ItemGravityEvent]
+        val updatedTask = task.asInstanceOf[ItemGravityEvent].copy(items = event.getItemDrop +: gravTask.items )
+        em.updateEvent(updatedTask,spcPlayer,plug)
+      }
+      }
+    }
     @EventHandler
     def replenishOxyOnDamage(event:EntityDamageByEntityEvent):Unit = {
       event.getDamager match {

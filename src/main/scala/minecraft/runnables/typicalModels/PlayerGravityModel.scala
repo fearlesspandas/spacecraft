@@ -194,8 +194,7 @@ object PlayerGravityModel {
               getSurroundingBlocks(player,searchCap,prorata).toSet
             //)
         )
-      .toSeq.sortWith((a,b) =>
-        (a !=null && b == null) ||
+      .toSeq.filterNot(_ == null).sortWith((a,b) =>
         materialDensityMap(a.getType)/ a.getLocation().distance(player.getLocation) >
           materialDensityMap(b.getType) / b.getLocation().distance(player.getLocation)
       ).take(maxBlocks).toSet

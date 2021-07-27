@@ -4,7 +4,6 @@ import java.io.{BufferedWriter, File, FileWriter}
 import Typical.core.dataset._
 import Typical.core.grammar._
 import io.circe.{Decoder, Encoder}
-import minecraft.events.{FrequencyMap, ProbabilityMap}
 import Players.{Players, SpaceCraftPlayer, _}
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player

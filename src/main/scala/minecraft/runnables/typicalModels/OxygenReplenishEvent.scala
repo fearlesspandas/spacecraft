@@ -13,7 +13,6 @@ object OxygenReplenishEvent {
     def apply(bukkitTask: BukkitTask):SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
 
     override def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = {
-      println("oxyReplenishHappening")
       if(amount < 0){player.sendMessage(s"${ChatColor.DARK_GRAY}$amount oxy")}
       else {player.sendMessage(s"${ChatColor.GREEN} +${amount} oxy")}
       player.copy(oxygenRemaining = player.oxygenRemaining + amount)

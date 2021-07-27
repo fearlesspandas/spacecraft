@@ -50,6 +50,16 @@ object PlayerCommandProcessor{
       case "giveplayercompass" =>
         givePlayerGravCompass(sender)
         eventManager
+      case "gravityoff" =>
+        updateProb(0,gravityEvent.name,sender)
+        updateProb(0,gravityEvent2.name,sender)
+        updateProb(0,gravityEvent3.name,sender)
+        eventManager
+      case "gravityon" =>
+        updateProb(1,gravityEvent.name,sender)
+        updateProb(1,gravityEvent2.name,sender)
+        updateProb(1,gravityEvent3.name,sender)
+        eventManager
       case cmd => sender.sendMessage(s"No command found for ${cmd}")
         eventManager
     }
@@ -93,7 +103,7 @@ object PlayerCommandProcessor{
     event3 <- em.getTask(player,gravityEvent3.name).<--[SpaceCraftPlayerEvent]
   }yield{
     val (e1,e2,e3) = (event1.asInstanceOf[PlayerGravityEvent],event2.asInstanceOf[PlayerGravityEvent],event3.asInstanceOf[PlayerGravityEvent])
-    player.setCompassTarget(e1.knownBlocks.head.getLocation())
+    player.setCompassTarget(e1.knownBlocks.headOption.map(_.getLocation()).getOrElse(player.getLocation))
     em
   }
   def gravScoreBoard = {

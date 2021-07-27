@@ -52,5 +52,16 @@ commands:
     giveplayercompass:
       description: sets the probability of a spacecraft event.
       usage: /<command>
-      permission: spacecraft.oxymeter
+      permission: spacecraft.giveplayercompass
       permission-message: You don't have <permission>
+    gravityoff:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.gravityoff
+      permission-message: You don't have <permission>
+    gravityon:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.gravityon
+      permission-message: You don't have <permission>
+
