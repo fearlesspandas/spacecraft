@@ -8,6 +8,7 @@ import org.bukkit.entity.Player
 import Typical.core.grammar._
 import Typical.core.dataset._
 import minecraft.events.EventLoop
+import minecraft.events.EventLoopTaskHandler.{GravityMeter, Vitals}
 import minecraft.runnables.typicalModels.EventManager.EventManager
 import minecraft.runnables.typicalModels.OxygenReplenishEvent.OxygenReplenishEvent
 import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
@@ -120,14 +121,20 @@ object PlayerCommandProcessor{
     event3 <- em.getTask(player,gravityEvent3.name).<--[SpaceCraftPlayerEvent]
   }yield{
     val (e1,e2,e3) = (event1.asInstanceOf[PlayerGravityEvent],event2.asInstanceOf[PlayerGravityEvent],event3.asInstanceOf[PlayerGravityEvent])
-    player.setCompassTarget(e1.knownBlocks.headOption.map(_.getLocation()).getOrElse(player.getLocation))
+    val target = Seq(e1,e2,e3)
+      .map(
+        p => p.knownBlocks.headOption.map(_.getLocation)
+      ).sortWith(
+      (a,b) => a.exists(l => b.exists(bl => l.distance(player.getLocation) < bl.distance(player.getLocation)))
+    )
+    player.setCompassTarget(target.head.getOrElse(player.getLocation))
     em
   }
   def gravScoreBoard = {
-    Bukkit.getScoreboardManager.getMainScoreboard.getObjective("GravityMeter").setDisplaySlot(DisplaySlot.SIDEBAR)
+    Bukkit.getScoreboardManager.getMainScoreboard.getObjective(GravityMeter.name).setDisplaySlot(DisplaySlot.SIDEBAR)
   }
   def oxyScoreBoard = {
-    Bukkit.getScoreboardManager.getMainScoreboard.getObjective("Vitals").setDisplaySlot(DisplaySlot.SIDEBAR)
+    Bukkit.getScoreboardManager.getMainScoreboard.getObjective(Vitals.name).setDisplaySlot(DisplaySlot.SIDEBAR)
   }
 
   def onTabComplete(sender: Player, command: Command, alias: String, args: Array[String]): util.List[String] = command.getName match {

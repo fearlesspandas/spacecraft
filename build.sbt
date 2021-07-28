@@ -2,7 +2,8 @@
 
 resolvers++=Seq(
   "Spigot Snapshots" at "https://hub.spigotmc.org/nexus/content/repositories/snapshots",
-   "Sonatype" at "https://oss.sonatype.org/content/repositories/snapshots/"
+   "Sonatype" at "https://oss.sonatype.org/content/repositories/snapshots/",
+  "WorldEdit" at "https://maven.enginehub.org/repo/"
 )
 // https://mvnrepository.com/artifact/org.apache.spark/spark-core
 libraryDependencies ++= Seq("org.spigotmc" % "spigot-api" % "1.15.1-R0.1-SNAPSHOT" % "provided")
@@ -14,6 +15,9 @@ libraryDependencies += "net.liftweb" %% "lift-json" % "3.4.1"
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.11.0"
 
 libraryDependencies += "org.statefreak" %% "typical" % "1.0-SNAPSHOT"
+//
+//libraryDependencies += "com.sk89q.worldedit" % "worldedit-bukkit" % "7.3.0-SNAPSHOT"
+//libraryDependencies += "com.sk89q.worldedit" % "worldedit-core" % "7.3.0-SNAPSHOT"
 val circeVersion = "0.12.3"
 
 libraryDependencies ++= Seq(

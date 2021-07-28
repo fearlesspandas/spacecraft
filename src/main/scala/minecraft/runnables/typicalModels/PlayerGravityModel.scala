@@ -12,6 +12,8 @@ import org.bukkit.event.player.PlayerVelocityEvent
 import org.bukkit.util.{Vector => LVector}
 import Typical.core.dataset._
 import Typical.core.grammar._
+import minecraft.events.EventLoop._
+import EventManager._
 import org.bukkit.entity.Player
 import org.bukkit.inventory.StonecutterInventory
 import org.bukkit.potion.PotionEffectType
@@ -40,11 +42,11 @@ object PlayerGravityModel {
       player <- src.player
       event <- src.<--[SpaceCraftPlayerEvent]
     }yield{
-      if(isStanding(player) || (!player.isOnline) || blocksBelow(player.getLocation(),15).nonEmpty || blocksAbove(player.getLocation(),10).nonEmpty){
+      if(isStanding(player) || (!player.isOnline) || blocksBelow(knownBlocks)(player.getLocation(),15).nonEmpty || blocksAbove(knownBlocks)(player.getLocation(),10).nonEmpty){
         if(player.isOnline) {
           player.value.setGravity(true);
           val gravevent = event.asInstanceOf[PlayerGravityEvent]
-          val newKNown = (gravevent.knownBlocks ++ expandBlockBlob(blocksBelow(player.getLocation,10).toSet)).filterNot(_==null).toSeq.sortWith((a,b) =>
+          val newKNown = (gravevent.knownBlocks ++ expandBlockBlob(gravevent.knownBlocks)(blocksBelow(gravevent.knownBlocks)(player.getLocation,10).toSet)).filterNot(_==null).toSeq.sortWith((a,b) =>
               materialDensityMap(a.getType)/ a.getLocation().distance(player.getLocation) >
                 materialDensityMap(b.getType) / b.getLocation().distance(player.getLocation)
           ).take(maxBlocks).toSet
@@ -54,122 +56,15 @@ object PlayerGravityModel {
       }
       else {
         player.value.setGravity(false)
+        if(player.isInsideVehicle){
+          player.getVehicle.setGravity(false)
+        }
         handleGravity(event,player,src)
       }
 
     }
 
-    def isStanding(player:Player):Boolean = {
-      !(player.getLocation().subtract(0,1,0).getBlock.getType.isAir &&
-        player.getLocation().subtract(1,1,0).getBlock.getType.isAir &&
-        player.getLocation().subtract(0,1,1).getBlock.getType.isAir &&
-        player.getLocation().subtract(1,1,1).getBlock.getType.isAir &&
-        player.getLocation().subtract(-1,1,-1).getBlock.getType.isAir &&
-        player.getLocation().subtract(0,1,-1).getBlock.getType.isAir &&
-        player.getLocation().subtract(-1,1,0).getBlock.getType.isAir &&
-        player.getLocation().subtract(-1,1,1).getBlock.getType.isAir &&
-        player.getLocation().subtract(1,1,-1).getBlock.getType.isAir
-        )
-    }
-    val normals = BlockFace.values().map(_.getDirection)
-    def expandBlockBlob(blocks:Set[Block],iterations:Int = 1):Set[Block] = {
-      val foundBlocks = //(0 to iterations).foldLeft(blocks)((accumBlocks,_) => {
-          blocks.flatMap(block => {
-          (normals)
-            .map(v => block.getLocation().add(v).getBlock)
-            .filterNot(b => (b.getType.isAir || knownBlocks.contains(b)))
-        })
-      foundBlocks
-    }
-    def rotateVec(vec:LVector,angle:Double):LVector = {
-      vec.rotateAroundX(angle).rotateAroundY(angle).rotateAroundZ(angle)
-    }
-    def expandBlockBlobDepthFirst(startingLoc:Block,dir:LVector,depth:Int = maxBlocks):Set[Block] = {
-      val normal = dir
-      //println(s"normal:${normal}")
-       val foundBlocks = (0 to depth/2).map(x =>
-         startingLoc.getLocation().add(normal.multiply(x*2)).getBlock
-       )
-      //println(s"foundBlocks:${foundBlocks.size},${foundBlocks.count(b => b.getType.isAir)}")
-      foundBlocks.toSet.filterNot(b => (b.getType.isAir || knownBlocks.contains(b)))
-    }
-    def expandBlockBlobDepthFirstSet(blocks:Set[Block],maxDist:Int = maxBlocks):Set[Block] = {
-      blocks.flatMap(b => normals.flatMap( n => expandBlockBlobDepthFirst(b,n,maxDist)))
-    }
 
-    def randomSearch(block:Location,radius:Int,samples:Int):Set[Block] = {
-      val loc = block
-      val randomNormals = () => (math.random*radius).floor.toInt
-      (0 to samples).map(ind => {
-        val (n1,n2,n3) = (randomNormals(),randomNormals(),randomNormals())
-        loc.add(n1,n2,n3).getBlock
-      }).toSet.filterNot(b => b.getType.isAir)
-    }
-    val fudge = (r:Int) => (math.random*r/2) * (if (math.random() > 0.5) 1 else -1).floor.toInt
-    def blocksBelow(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.subtract(0,prorata*x + fudge(prorata),0).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))//.take(num)
-    }
-    def blocksAbove(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(0,prorata*x + fudge(prorata),0).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))//.take(num)
-    }
-    def blocksX(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(x/prorata + fudge(prorata),0,0).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksMinusX(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.subtract(x* prorata + fudge(prorata),0,0).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksZ(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(0,0,x* prorata + fudge(prorata)).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksMinusZ(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.subtract(0,0,x*prorata + fudge(prorata)).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksTopRight(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(x*prorata + fudge(prorata),x * prorata + fudge(prorata),0).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksBottomLeft(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.subtract(x*prorata+ fudge(prorata),x*prorata+ fudge(prorata),0).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksBottomRight(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(0,x*prorata+ fudge(prorata),x*prorata+ fudge(prorata)).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksTopLeft(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.subtract(0,x*prorata+ fudge(prorata),x*prorata + fudge(prorata)).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksBackRight(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(x*prorata + fudge(prorata),0,x* prorata + fudge(prorata)).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksBackLeft(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.subtract(x * prorata+ fudge(prorata),0,x * prorata+ fudge(prorata)).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksUPUPUP(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap/prorata).map(x => loc.add(x,x,x).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def blocksDOWNDOWNDOWN(loc:Location,cap:Int = 100,prorata:Int = 4):Seq[Block] = {
-      (0 to cap).map(x => loc.subtract(x,x,x).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-
-
-    def blocksInDir(loc:Location,x:Int,y:Int,z:Int,cap:Int = 100,prorata:Int = 4) = {
-      (0 to cap/prorata).map(a => loc.subtract(x,y,z).multiply(a*prorata).getBlock).filterNot(b => b.getType.isAir || knownBlocks.contains(b))
-    }
-    def getSurroundingBlocks(player:Player,searchCap:Int,prorata:Int):Seq[Block] = {
-      val funcs:Seq[(Int,Int) => Seq[Block]] = Seq(
-      blocksBelow(player.getLocation.add(player.getVelocity),_:Int,_:Int),
-        blocksAbove(player.getLocation.add(player.getVelocity),_:Int,_:Int),
-        blocksX(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksMinusX(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksZ(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksMinusZ(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksTopRight(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksTopLeft(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksBottomRight(player.getLocation.add(player.getVelocity),_:Int,_:Int),
-        blocksBottomLeft(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksBackRight(player.getLocation.add(player.getVelocity),_:Int,_:Int) ,
-        blocksBackLeft(player.getLocation.add(player.getVelocity),_:Int,_:Int)
-        )
-      funcs.collect({case f if(math.random > 0.6) => f}).flatMap(f => f(searchCap,prorata))
-    }
     def handleGravity(event:SpaceCraftPlayerEvent, player:SpaceCraftPlayer,  src:dataset[SpaceCraftPlayer with SpaceCraftPlayer]):dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] = {
       val gravityEvent = event.asInstanceOf[PlayerGravityEvent]
       val gravityScaler = gravityEvent.gravity
@@ -182,21 +77,39 @@ object PlayerGravityModel {
           .filterNot(
             b => b.getType.isAir || gravityEvent.knownBlocks.contains(b)
           )
+      val onlinePlayers = Bukkit.getServer.getOnlinePlayers.asScala.toSeq.filterNot(_.getUniqueId == player.getUniqueId).sortWith(
+        (a,b) =>
+          a
+          .getLocation()
+            .distance(player.getLocation()) <
+            b
+              .getLocation()
+              .distance(player.getLocation())
+      ).take(10)
+      val potentialBlocks = onlinePlayers.flatMap( p => {
+        eventManager
+          .getTask(p,this.name)
+          .<--[SpaceCraftPlayerEvent]
+          .biMap(
+            _ => Set.empty[Block]
+          )(
+            d => d.get.asInstanceOf[PlayerGravityEvent].knownBlocks.take(4)
+          )
+      })
       //println(s"knownBlocks = ${gravityEvent.knownBlocks.size}")
       val playerlocation = player.getLocation.toVector
 
       val filteredBlocks = (
+          potentialBlocks ++
           gravityEvent.knownBlocks ++
-          expandBlockBlob(gravityEvent.knownBlocks) ++
-          expandBlockBlobDepthFirstSet(gravityEvent.knownBlocks,20) ++
-          expandBlockBlob(blocksInSight.toSet)  ++
+          expandBlockBlob(gravityEvent.knownBlocks)(gravityEvent.knownBlocks) ++
+          expandBlockBlobDepthFirstSet(gravityEvent.knownBlocks)(gravityEvent.knownBlocks,20) ++
+          expandBlockBlob(gravityEvent.knownBlocks)(blocksInSight.toSet)  ++
             //expandBlockBlob(
-              getSurroundingBlocks(player,searchCap,prorata).toSet
+              getSurroundingBlocks(gravityEvent.knownBlocks)(player,searchCap,prorata).toSet
             //)
         )
-      .toSeq.filterNot(_ == null).sortWith((a,b) =>
-        materialDensityMap(a.getType)/ a.getLocation().distance(player.getLocation) >
-          materialDensityMap(b.getType) / b.getLocation().distance(player.getLocation)
+      .toSeq.filterNot(_ == null).sortWith(sortByDensityAndDistance(materialDensityMap)(player.getLocation())
       ).take(maxBlocks).toSet
 
       //println(s"newKNownBocks:${filteredBlocks.size}")
@@ -216,7 +129,14 @@ object PlayerGravityModel {
       })
 
       val currentVelocity = player.getVelocity
-      if(forcevecs.length() > 0){player.setVelocity(currentVelocity.subtract(forcevecs))}
+      if(forcevecs.length() > 0){
+        if(player.isInsideVehicle){
+          val vehicle = player.getVehicle
+          val vehicleVel = vehicle.getVelocity
+          vehicle.setVelocity(vehicleVel.subtract(forcevecs))
+        }else
+          player.setVelocity(currentVelocity.subtract(forcevecs))
+      }
      // println(s"updating gravity${forcevecs}")
       src ++[SpaceCraftPlayerEvent,PlayerGravityEvent] gravityEvent.copy(knownBlocks = filteredBlocks,lastForceVector = forcevecs) //++ player//.copy(postProcessing = afterEffects)
     }

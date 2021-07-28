@@ -26,9 +26,12 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.{DisplaySlot, Score}
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
 import minecraft.runnables.typicalModels.ListenerModel._
-import minecraft.utils.ItemCommands
+import minecraft.utils.MinecartController.MinecartControlModel
+import minecraft.utils.{ItemCommands, MinecartController, Surroundings}
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause
+import org.bukkit.event.world.ChunkLoadEvent
 
+import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 object EventLoop {
   val oxyModel = OxygenDepletionModel(3,10000,None)
@@ -42,6 +45,12 @@ object EventLoop {
   val blazeModel = BlazeSpawnEvent(entitySpawnRate,0.07)
   val itemGravityEvent = ItemGravityEvent("ItemGravityEvent1",100,1,2,Seq())
   val itemGravityEvent2 = ItemGravityEvent("ItemGravityEvent2",100,1,2,Seq())
+  val minecartController = MinecartControlModel(
+    name = "MinecartControlModel",
+    frequency = 1000,
+    probability = 1,
+    speed = 5
+  )
   val gravityEvent = PlayerGravityEvent(
     frequency = 300,
     probability = 1,
@@ -86,7 +95,8 @@ object EventLoop {
     gravityEvent2,
     gravityEvent3,
     itemGravityEvent,
-    itemGravityEvent2
+    itemGravityEvent2,
+    minecartController
   ) //++ entitySpawnTasks
 
 
@@ -210,12 +220,53 @@ object EventLoop {
     }
     @EventHandler
     def itemCommandHandler(event:PlayerInteractEvent) = event.getAction match {
-      case Action.RIGHT_CLICK_AIR =>
+      case Action.RIGHT_CLICK_AIR if(event.getPlayer.isInsideVehicle) =>
+        MinecartController.moveCart(event.getPlayer,10)
+      case Action.RIGHT_CLICK_AIR if(!event.getPlayer.isInsideVehicle) =>
         val item = event.getItem.getType
         ItemCommands.runCommand(event.getPlayer,item)
       case _ => ()
     }
-
+    //every time a chunk loads all nearby players will be potentially affected
+//    def loadGravityFromChunkLoad(event:ChunkLoadEvent):Unit = {
+//      val chunk = event.getChunk
+//      val pseudoOrigin = new org.bukkit.util.Vector(chunk.getX,0,chunk.getZ)
+//      val prob = 0.3
+//      val max = 10
+//      val chunkblocks =
+//        (for{
+//          _ <- Seq()
+//          if math.random() < prob
+//        dx <- 0 to 16
+//        if math.random() < prob
+//        dz <- 0 to 16
+//        if math.random() < prob
+//        y <- 0 to 255
+//        block = chunk.getBlock(chunk.getX + dx,y,chunk.getZ + dz)
+//        if math.random() < prob
+//          if !block.getType.isAir
+//      }yield {
+//        block
+//      }).sortWith(
+//          (a,b) => gravityEvent.materialDensityMap(a.getType) < gravityEvent.materialDensityMap(b.getType)
+//        ).toSet.take(10)
+//      Bukkit
+//        .getServer
+//        .getOnlinePlayers
+//        .asScala
+//        .filter(p => p.getLocation().distance(pseudoOrigin.toLocation(chunk.getWorld)) < 100)
+//        .foreach(p => for{
+//          em <- eventManager
+//          task <- em.getTask(p,gravityEvent.name)
+//          spcplayer <- em.getTask(p,gravityEvent.name).player
+//        }yield{
+//          val gravTask = task.asInstanceOf[PlayerGravityEvent]
+//          //potentially check for overall mass in comparison to already known blocks
+//          //so that we can avoid canceling and restarting the tasks when there's a negligible
+//          //affect. Although this is why we have multiple threads to be fair
+//          em.updateEvent(gravTask.copy(knownBlocks = chunkblocks ++ gravTask.knownBlocks),spcplayer,plug)
+//        })
+    //}
   }
 
 }
