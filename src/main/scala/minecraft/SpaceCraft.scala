@@ -4,13 +4,14 @@ import java.util
 
 import Typical.core.dataset.DatasetError
 import minecraft.events.EventLoop._
-import minecraft.events.EventLoopTaskHandler.{EventLoopTask, ScoreboardTask}
+import minecraft.events.EventLoopTaskHandler.{EventLoopTask, ScoreboardTask, Vitals}
 import org.bukkit.Bukkit
 import org.bukkit.command.{Command, CommandSender}
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.DisplaySlot
 import PlayerCommandProcessor._
+
 import scala.collection.JavaConverters._
 class SpaceCraft extends JavaPlugin{
 
@@ -20,8 +21,8 @@ class SpaceCraft extends JavaPlugin{
 		new EventLoopListener(this)
 		new EventLoopTask().runTaskTimer(this,0,3)
 		val scoreboard = Bukkit.getScoreboardManager.getMainScoreboard
-		val maybeObjective = scoreboard.getObjective("Vitals")
-		val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"Vitals","dummy",s"Vitals") else maybeObjective
+		val maybeObjective = scoreboard.getObjective(Vitals.name)
+		val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"${Vitals.name}","dummy",s"${Vitals}") else maybeObjective
 		objective.setDisplaySlot(DisplaySlot.SIDEBAR)
 		new ScoreboardTask().runTaskTimer(this,0,3)
 	}

@@ -64,4 +64,14 @@ commands:
       usage: /<command>
       permission: spacecraft.gravityon
       permission-message: You don't have <permission>
+    addcmd:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.addcmd
+      permission-message: You don't have <permission>
+    removecmd:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.removecmd
+      permission-message: You don't have <permission>
 

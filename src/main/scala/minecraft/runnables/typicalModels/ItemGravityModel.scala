@@ -12,13 +12,13 @@ object ItemGravityModel {
     override def setProbability(probability: Double): SpaceCraftPlayerEvent = this.copy(probability = probability)
 
     override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
-    val minDist = 7
+    val minDist = 14
     override def apply(src: dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent]): dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = for{
       player <- src.player
       event <- src.<--[SpaceCraftPlayerEvent]
     }yield{
       val itemGravEvent = event.asInstanceOf[ItemGravityEvent]
-      val livingItems = itemGravEvent.items.filterNot(_.isDead)
+      val livingItems = itemGravEvent.items.filterNot(i => i.isDead || i.isOnGround)
       //println(s"living items:${livingItems.size}")
       val gravityScaler = itemGravEvent.gravity
       livingItems.foreach(i => {
@@ -32,7 +32,7 @@ object ItemGravityModel {
         else{
           //println("Calculating item gavity")
           //println(s"itemDistace:${dist}")
-          val vec = player.getLocation().subtract(i.getLocation()).add(player.getVelocity)
+          val vec = player.getLocation().subtract(i.getLocation())
           val scaler = -100*gravityScaler/(dist*dist)
           val currvel = i.getVelocity
           i.setVelocity(currvel.subtract(vec.toVector.normalize().multiply(scaler)))

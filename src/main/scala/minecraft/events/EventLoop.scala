@@ -3,6 +3,7 @@ import java.util.UUID
 
 import Typical.core.dataset._
 import Typical.core.grammar._
+import minecraft.events.EventLoopTaskHandler.ActiveBoards
 import minecraft.runnables.typicalModels.EntitySpawnModel
 import minecraft.runnables.typicalModels.EntitySpawnModel.{BlazeSpawnEvent, DragonSpawnEvent, GhastSpawnEvent, PhantomSpawnEvent}
 import minecraft.runnables.typicalModels.EventManager.EventManager
@@ -16,15 +17,16 @@ import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
 import org.bukkit.{Bukkit, Material}
 import org.bukkit.entity.Player
-import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.{Action, BlockBreakEvent}
 import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntityDamageEvent, EntitySpawnEvent}
 import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.event.player.{PlayerDropItemEvent, PlayerJoinEvent, PlayerRespawnEvent}
+import org.bukkit.event.player.{PlayerDropItemEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerRespawnEvent}
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.{DisplaySlot, Score}
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
 import minecraft.runnables.typicalModels.ListenerModel._
+import minecraft.utils.ItemCommands
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause
 
 import scala.collection.concurrent.TrieMap
@@ -89,11 +91,11 @@ object EventLoop {
 
 
 
-  def handleScore(player:Player,objectiveName:String,model:SpaceCraftPlayerEvent,deriveScore:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Double):Unit = {
+  def handleScore(player:Player, objectiveName:ActiveBoards, model:SpaceCraftPlayerEvent, deriveScore:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Double):Unit = {
     val scoreboard =
       Bukkit.getScoreboardManager.getMainScoreboard
-    val maybeObjective = scoreboard.getObjective(objectiveName)
-    val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"${objectiveName}","dummy",s"${objectiveName}") else maybeObjective
+    val maybeObjective = scoreboard.getObjective(objectiveName.name)
+    val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"${objectiveName.name}","dummy",s"${objectiveName.name}") else maybeObjective
     //println(s"registeringObjective:${objective != null}")
     for{
       em <- eventManager
@@ -145,6 +147,7 @@ object EventLoop {
           case p:Player if(p.getInventory.getBoots.getType == Material.DIAMOND_BOOTS) => event.setCancelled(true)
           case _ => ()
         }
+      case DamageCause.VOID => event.setCancelled(true)
       case _ => ()
 
     }
@@ -165,6 +168,7 @@ object EventLoop {
       val player = event.getPlayer
       if (!player.isOnGround){
         event.getItemDrop.setGravity(false);
+        event.getItemDrop.setGlowing(true)
       val ievent = Seq(itemGravityEvent,itemGravityEvent2)((math.random * 2).floor.toInt)
       for{
         em <- eventManager
@@ -203,6 +207,13 @@ object EventLoop {
           } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
         case _ => ()
       }
+    }
+    @EventHandler
+    def itemCommandHandler(event:PlayerInteractEvent) = event.getAction match {
+      case Action.RIGHT_CLICK_AIR =>
+        val item = event.getItem.getType
+        ItemCommands.runCommand(event.getPlayer,item)
+      case _ => ()
     }
 
   }

@@ -12,6 +12,7 @@ import minecraft.runnables.typicalModels.EventManager.EventManager
 import minecraft.runnables.typicalModels.OxygenReplenishEvent.OxygenReplenishEvent
 import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
 import minecraft.runnables.typicalModels.PlayerGravityModel.PlayerGravityEvent
+import minecraft.utils.ItemCommands
 import org.bukkit.{Bukkit, Material}
 
 import scala.collection.JavaConverters._
@@ -60,8 +61,24 @@ object PlayerCommandProcessor{
         updateProb(1,gravityEvent2.name,sender)
         updateProb(1,gravityEvent3.name,sender)
         eventManager
+      case "addcmd" =>
+        val cmdSeq = args.foldLeft("")(_ + " " +  _).split(';').map(cmd => cmd.dropWhile(_.isWhitespace))
+        val item = sender.getInventory.getItemInMainHand.getType
+        ItemCommands.addCommand(sender,item,cmdSeq)
+        eventManager
+      case "removecmd" =>
+        args.size match {
+          case 1 =>
+            val item = Material.getMaterial(args(0).toUpperCase())
+            ItemCommands.removeCommand(sender,item)
+          case _ =>
+            val item = sender.getInventory.getItemInMainHand.getType
+            ItemCommands.removeCommand(sender,item)
+        }
+        eventManager
       case cmd => sender.sendMessage(s"No command found for ${cmd}")
         eventManager
+
     }
     def updateGravityStrength(value:Double,player:Player):dataset[EventManager] = for{
       em <- eventManager
@@ -134,6 +151,16 @@ object PlayerCommandProcessor{
     }
     case "gravitystrength" => args.size match {
       case 1 => List("""value > 0  (unless you want to)""").asJava
+      case _ => List().asJava
+    }
+    case "addcmd" => args.size match {
+      case n if n > 0 => List(
+        "player commands seperated by ;"
+      ).asJava
+      case _ => List().asJava
+    }
+    case "removecmd" => args.size match {
+      case 1 => ItemCommands.itemCommands.filterKeys(k => k._1 == sender.getUniqueId).toList.map(p => p._1._2.toString).asJava
       case _ => List().asJava
     }
     case _ => List().asJava
