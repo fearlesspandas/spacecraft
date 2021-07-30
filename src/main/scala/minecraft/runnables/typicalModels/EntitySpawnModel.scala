@@ -35,9 +35,9 @@ object EntitySpawnModel {
       p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,Int.MaxValue,100))
       p.setSilent(true)
     case p:Player =>
-      p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,Int.MaxValue,100))
-      p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,Int.MaxValue,100))
-      p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,Int.MaxValue,2))
+      if(!p.hasPotionEffect(PotionEffectType.GLOWING)) p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,Int.MaxValue,100))
+      if(!p.hasPotionEffect(PotionEffectType.SLOW_FALLING)) p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING,Int.MaxValue,100))
+      if(!p.hasPotionEffect(PotionEffectType.SPEED))p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,Int.MaxValue,2))
       //p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP,Int.MaxValue,1))
   }
   case class DragonSpawnEvent(frequency:Double,probability:Double,value:Option[BukkitTask] = None) extends MonadicEvent {

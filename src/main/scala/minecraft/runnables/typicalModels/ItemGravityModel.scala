@@ -3,10 +3,10 @@ import Typical.core.dataset._
 import Typical.core.grammar._
 import PlayerEvents._
 import Players._
-import org.bukkit.entity.Item
+import org.bukkit.entity.{Entity, Item, Vehicle}
 import org.bukkit.scheduler.BukkitTask
 object ItemGravityModel {
-  case class ItemGravityEvent(name:String,frequency:Double,probability:Double,gravity:Double,items:Seq[Item],value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
+  case class ItemGravityEvent(name:String,frequency:Double,probability:Double,gravity:Double,items:Seq[Entity],value:Option[BukkitTask] = None) extends SpaceCraftPlayerEvent {
     override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)
 
     override def setProbability(probability: Double): SpaceCraftPlayerEvent = this.copy(probability = probability)
@@ -18,24 +18,28 @@ object ItemGravityModel {
       event <- src.<--[SpaceCraftPlayerEvent]
     }yield{
       val itemGravEvent = event.asInstanceOf[ItemGravityEvent]
-      val livingItems = itemGravEvent.items.filterNot(i => i.isDead || i.isOnGround)
-      //println(s"living items:${livingItems.size}")
+      val livingItems = itemGravEvent.items.filterNot(i => i.isDead || i.isOnGround || i.getPassengers.contains(player.value))
+      val deadItems = itemGravEvent.items.filter(i => i.isDead || i.isOnGround || i.getPassengers.contains(player.value))
+      deadItems.foreach(i => {
+        i.setCustomNameVisible(false)
+        i.setCustomName(null)
+      })
+
       val gravityScaler = itemGravEvent.gravity
       livingItems.foreach(i => {
         val dist = i.getLocation().distance(player.getLocation())
-        val playerloc = player.getLocation
         if(dist <= minDist) {
-          //println("Freezing items")
-          //println(s"itemDistace:${dist}")
           i.setVelocity(new org.bukkit.util.Vector(0,0,0))
         }
         else{
-          //println("Calculating item gavity")
-          //println(s"itemDistace:${dist}")
           val vec = player.getLocation().subtract(i.getLocation())
-          val scaler = -100*gravityScaler/(dist*dist)
+          val playerVel = player.getVelocity.length()
+          val baseScaler =  100
+          val scaler = if(playerVel > 0) playerVel+ (playerVel * 0.10) else -baseScaler*gravityScaler/(dist*dist)
           val currvel = i.getVelocity
           i.setVelocity(currvel.subtract(vec.toVector.normalize().multiply(scaler)))
+          i.setCustomName(s"Following ${player.getName}")
+          i.setCustomNameVisible(true)
         }
       })
       src ++ itemGravEvent.copy(items = livingItems)

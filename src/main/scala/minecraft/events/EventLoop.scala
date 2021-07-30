@@ -16,11 +16,11 @@ import minecraft.runnables.typicalModels.PlayerGravityModel.PlayerGravityEvent
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
 import minecraft.runnables.typicalModels.RocketChargeModel.RocketChargeModel
 import org.bukkit.{Bukkit, Material}
-import org.bukkit.entity.Player
+import org.bukkit.entity.{EnderSignal, Phantom, Player, Vehicle}
 import org.bukkit.event.block.{Action, BlockBreakEvent}
 import org.bukkit.event.entity.{EntityDamageByEntityEvent, EntityDamageEvent, EntitySpawnEvent}
 import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.event.player.{PlayerDropItemEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerRespawnEvent}
+import org.bukkit.event.player.{PlayerDropItemEvent, PlayerInteractEntityEvent, PlayerInteractEvent, PlayerJoinEvent, PlayerRespawnEvent}
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.{DisplaySlot, Score}
@@ -29,6 +29,7 @@ import minecraft.runnables.typicalModels.ListenerModel._
 import minecraft.utils.MinecartController.MinecartControlModel
 import minecraft.utils.{ItemCommands, MinecartController, Surroundings}
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause
+import org.bukkit.event.vehicle.{VehicleDamageEvent, VehicleEnterEvent, VehicleExitEvent}
 import org.bukkit.event.world.ChunkLoadEvent
 
 import scala.collection.JavaConverters._
@@ -47,9 +48,19 @@ object EventLoop {
   val itemGravityEvent2 = ItemGravityEvent("ItemGravityEvent2",100,1,2,Seq())
   val minecartController = MinecartControlModel(
     name = "MinecartControlModel",
-    frequency = 1000,
+    frequency = 200,
     probability = 1,
-    speed = 5
+    speed = 0,
+    inventorySnapshot = Seq(),
+    waypoints = Seq()
+  )
+  val minecartController2 = MinecartControlModel(
+    name = "MinecartControlModel2",
+    frequency = 200,
+    probability = 1,
+    speed = 0,
+    inventorySnapshot = Seq(),
+    waypoints = Seq()
   )
   val gravityEvent = PlayerGravityEvent(
     frequency = 300,
@@ -150,6 +161,7 @@ object EventLoop {
         Thread.sleep(150)
       })
     }
+
     @EventHandler
     def crashDamageHandler(event:EntityDamageEvent):Unit = event.getCause match {
       case DamageCause.FLY_INTO_WALL =>
@@ -220,12 +232,77 @@ object EventLoop {
     }
     @EventHandler
     def itemCommandHandler(event:PlayerInteractEvent) = event.getAction match {
-      case Action.RIGHT_CLICK_AIR if(event.getPlayer.isInsideVehicle) =>
-        MinecartController.moveCart(event.getPlayer,10)
       case Action.RIGHT_CLICK_AIR if(!event.getPlayer.isInsideVehicle) =>
         val item = event.getItem.getType
         ItemCommands.runCommand(event.getPlayer,item)
+
       case _ => ()
+    }
+    @EventHandler
+    def enterMinecart(event:VehicleEnterEvent):Unit = event.getEntered match {
+      case player: Player =>
+        for {
+          spcplayer <- eventManager.getTask(player,minecartController.name).player
+          task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
+        }yield {
+          val mctask = task.asInstanceOf[MinecartControlModel]
+          val inventory = player.getInventory.getContents
+          MinecartController.setInventoryControls(player)
+          eventManager.updateEvent(mctask.copy(inventorySnapshot = inventory),spcplayer,plug)
+        }
+      case _ => ()
+    }
+    @EventHandler
+    def exitMinecart(event:VehicleExitEvent):Unit = event.getExited match {
+      case player: Player =>
+        for {
+          spcplayer <- eventManager.getTask(player,minecartController.name).player
+          task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
+        }yield {
+          val mctask = task.asInstanceOf[MinecartControlModel]
+          player.getInventory.setContents(mctask.inventorySnapshot.toArray)
+          player.setCanPickupItems(true)
+          eventManager.updateEvent(mctask.copy(probability = 0),spcplayer,plug)
+        }
+      case _ => ()
+    }
+    @EventHandler
+    def addMinecartToConvoy(event:VehicleDamageEvent):Unit = event.getVehicle match {
+      case v:Vehicle =>
+        val player = event.getAttacker.asInstanceOf[Player]
+        if (!player.isOnGround){
+          val ievent = Seq(itemGravityEvent,itemGravityEvent2)((math.random * 2).floor.toInt)
+          for{
+            em <- eventManager
+            task <- em.getTask(player,ievent.name).<--[SpaceCraftPlayerEvent]
+            spcPlayer <- em.getTask(player,ievent.name).player
+          }yield {
+            val gravTask = task.asInstanceOf[ItemGravityEvent]
+            val updatedTask = task.asInstanceOf[ItemGravityEvent].copy(items = v +: gravTask.items )
+            em.updateEvent(updatedTask,spcPlayer,plug)
+          }
+    }
+    }
+    @EventHandler
+    def fillShip(event:PlayerInteractEntityEvent):Unit = {
+      val player = event.getPlayer
+      event.getRightClicked match {
+        case v:Vehicle =>
+          player.getInventory.getItemInMainHand.getType match {
+            case Material.COAL_BLOCK =>
+              val updatedInv = player.getInventory.getItemInMainHand
+              updatedInv.setAmount(1)
+              player.getInventory.remove(updatedInv)
+              for {
+                spcplayer <- eventManager.getTask(player,minecartController.name).player
+                task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
+              }yield {
+                val mctask = task.asInstanceOf[MinecartControlModel]
+                eventManager.updateEvent(mctask.addFuel(v,100),spcplayer,plug)
+              }
+          }
+
+      }
     }
     //every time a chunk loads all nearby players will be potentially affected
 //    def loadGravityFromChunkLoad(event:ChunkLoadEvent):Unit = {

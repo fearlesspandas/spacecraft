@@ -14,7 +14,8 @@ import minecraft.runnables.typicalModels.OxygenReplenishEvent.OxygenReplenishEve
 import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
 import minecraft.runnables.typicalModels.PlayerGravityModel.PlayerGravityEvent
 import minecraft.utils.ItemCommands
-import org.bukkit.{Bukkit, Material}
+import minecraft.utils.MinecartController.MinecartControlModel
+import org.bukkit.{Bukkit, Location, Material}
 
 import scala.collection.JavaConverters._
 import org.bukkit.plugin.java.JavaPlugin
@@ -77,9 +78,43 @@ object PlayerCommandProcessor{
             ItemCommands.removeCommand(sender,item)
         }
         eventManager
+      case "addwaypoint" =>
+        args.size match {
+          case 3 =>
+            val coords = args.map(_.toInt)
+            val (x,y,z) = (coords.head,coords.tail.head,coords.tail.tail.head)
+            addWayPoint(sender)(x,y,z)
+          case _ => eventManager
+        }
+      case "showwaypoints" =>
+        showWaypoints(sender)
+      case "clearwaypoints" =>
+        clearWaypoints(sender)
       case cmd => sender.sendMessage(s"No command found for ${cmd}")
         eventManager
 
+    }
+    def clearWaypoints(player:Player):dataset[EventManager] = for{
+      spcplayer <- eventManager.getTask(player,minecartController.name).player
+      task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
+    }yield{
+      val mctask = task.asInstanceOf[MinecartControlModel]
+      eventManager.updateEvent(mctask.copy(waypoints = Seq()),spcplayer,plugin)
+    }
+    def showWaypoints(player:Player):dataset[EventManager]= for{
+      task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
+    }yield{
+      val mctask = task.asInstanceOf[MinecartControlModel]
+      player.sendMessage(s"Waypoints:${mctask.waypoints.foldLeft("")(_ + _)}")
+      eventManager
+    }
+    def addWayPoint(player:Player)(x:Int,y:Int,z:Int):dataset[EventManager] = for{
+      spcplayer <- eventManager.getTask(player,minecartController.name).player
+      task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
+    }yield{
+      val mctask = task.asInstanceOf[MinecartControlModel]
+      val loc = new Location(player.getWorld,x,y,z)
+      eventManager.updateEvent(mctask.copy(waypoints =  mctask.waypoints :+ loc),spcplayer,plugin)
     }
     def updateGravityStrength(value:Double,player:Player):dataset[EventManager] = for{
       em <- eventManager
@@ -170,6 +205,12 @@ object PlayerCommandProcessor{
       case 1 => ItemCommands.itemCommands.filterKeys(k => k._1 == sender.getUniqueId).toList.map(p => p._1._2.toString).asJava
       case _ => List().asJava
     }
+    case "addwaypoint" =>
+      args.size match {
+        case 1 => List("coordinate:x").asJava
+        case 2 => List("coordinate:y").asJava
+        case 3 => List("coordinate:z").asJava
+      }
     case _ => List().asJava
   }
 }

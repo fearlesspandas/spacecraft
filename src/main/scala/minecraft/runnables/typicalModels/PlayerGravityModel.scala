@@ -68,8 +68,8 @@ object PlayerGravityModel {
     def handleGravity(event:SpaceCraftPlayerEvent, player:SpaceCraftPlayer,  src:dataset[SpaceCraftPlayer with SpaceCraftPlayer]):dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] = {
       val gravityEvent = event.asInstanceOf[PlayerGravityEvent]
       val gravityScaler = gravityEvent.gravity
-      val searchCap = 50
-      val prorata = 5
+      val searchCap = 100
+      val prorata = 10
       val blocksInSight =
         player
         .getLineOfSight(Material.values().toSet.asJava,searchCap)

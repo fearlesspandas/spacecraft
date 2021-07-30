@@ -11,6 +11,7 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import minecraft.PlayerCommandProcessor._
 import minecraft.runnables.typicalModels.ItemGravityModel.ItemGravityEvent
+import minecraft.utils.MinecartController.MinecartControlModel
 object EventLoopTaskHandler {
 case class EventLoopTask() extends BukkitRunnable{
   override def run(): Unit = for{
@@ -25,6 +26,7 @@ case class EventLoopTask() extends BukkitRunnable{
   case object Vitals extends ActiveBoards("Vitals")
   case object GravityMeter extends ActiveBoards("GravityMeter")
   case object ItemBeamCounter extends ActiveBoards("ItemBeamCounter")
+  case object Spedometer extends ActiveBoards("Speed")
 
   case class ScoreboardTask() extends BukkitRunnable{
 
@@ -51,10 +53,14 @@ case class EventLoopTask() extends BukkitRunnable{
         )
       t1 + t2
     }
+    def speed(player:Player,src:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer]):Double = {
+        src.<--[SpaceCraftPlayerEvent].biMap(_ => 0d)(d => d.get.asInstanceOf[MinecartControlModel].speed*100)
+    }
     override def run(): Unit = Bukkit.getServer.getOnlinePlayers.forEach(p => {
       handleScore(p,Vitals,oxyModel,getOxy(_))
       handleScore(p,GravityMeter,gravityEvent,avgGravity(p,_))
       handleScore(p,ItemBeamCounter,itemGravityEvent,itemsTracked(p,_))
+      handleScore(p,Spedometer,minecartController,speed(p,_))
 
       givePlayerGravCompass(p)
     })
