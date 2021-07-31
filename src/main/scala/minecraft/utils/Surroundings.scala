@@ -159,7 +159,15 @@ object Surroundings {
       materialDensityMap(b.getType) / b.getLocation().distance(src)
   }
 
-
+  def getBox(loc:Location,size:Int):Seq[Block] = for{
+    dx <- (0 until size)
+    dz <- 0 until size
+    y <- 0 until size
+    blk = loc.add(new org.bukkit.util.Vector(loc.getBlockX + (dx - (size/2).floor.toInt),loc.getBlockY + y,loc.getBlockZ + (dz - (size/2).floor.toInt))).getBlock
+    if !blk.getType.isAir
+  }yield{
+    blk
+  }
 
 //  def regionTEst = {
 //    val v1 = new BlockVector3(0,0,0)

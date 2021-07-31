@@ -38,24 +38,58 @@ object MinecartController {
       }yield{
         val cartModel = event.asInstanceOf[MinecartControlModel]
         val inventory = player.getInventory
-        val mainHand = inventory.getItemInMainHand.getType
-        val offHand = inventory.getItemInOffHand.getType
+        val mainHandIt = inventory.getItemInMainHand
+          val mainHand = if(mainHandIt == null) None else Some(mainHandIt.getType)
+        val offHandIt = inventory.getItemInOffHand
+          val offHand = if(offHandIt == null) None else Some(offHandIt.getType)
+
         if(player.isInsideVehicle){
           val vehicle = player.getVehicle
-          if(Surroundings.blocksBelow(Set())(player.getLocation(),5).nonEmpty){
+          if(vehicle == null) {
+            src
+          }
+          else if(Surroundings.blocksBelow(Set())(player.getLocation(),5).nonEmpty){
             if(vehicle.isGlowing) vehicle.setGlowing(false)
             if(!vehicle.hasGravity) vehicle.setGravity(true)
           }else{
             if(vehicle.hasGravity)vehicle.setGravity(false)
             if(!vehicle.isGlowing)vehicle.setGlowing(true)
           }
+          if(vehicle != null) handleControls(offHand.getOrElse(Material.AIR))(src)(cartModel,player,mainHand.getOrElse(Material.AIR))
+          else {
+            src
+          }
         }
-        handleControls(offHand)(src)(cartModel,player,mainHand)
-
+        else {
+          src
+        }
       }
-    def addFuel(entity:Entity,amt:Double):MinecartControlModel = this.copy(fuel = fuel ++ Map(entity.getUniqueId -> (fuel(entity.getUniqueId) + amt)))
+    def addFuel(entity:Entity,amt:Double):MinecartControlModel = this.copy(fuel = this.fuel.updated(entity.getUniqueId ,(this.fuel.getOrElse(entity.getUniqueId,0d) + amt)))
 
   }
+
+  case class FuelReplenishModel(
+                                 name:String = "FuelReplenishModel",
+                                 frequency:Double=1000,
+                                 probability:Double = 0,
+                                 amount:Double = 100,
+                                 value:Option[BukkitTask]= None
+                               )  extends SpaceCraftPlayerEvent {
+    override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)
+
+    override def setProbability(probability: Double): SpaceCraftPlayerEvent = this.copy(probability = probability)
+
+    override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
+
+    override def apply(src: dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent]): dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] = for{
+      task <- src.<--[SpaceCraftPlayerEvent]
+      player <- src.player
+    }yield{
+      val mctask = task.asInstanceOf[MinecartControlModel]
+      src ++[SpaceCraftPlayerEvent,MinecartControlModel] mctask.addFuel(player.value,amount)
+    }
+  }
+
   def setInventoryControls(player:Player):Unit ={
     val inventory = player.getInventory
     player.setCanPickupItems(false)
@@ -99,6 +133,8 @@ object MinecartController {
       {src ++[SpaceCraftPlayerEvent,MinecartControlModel] cartModel.copy(waypoints = cartModel.waypoints.tail)}
       else if(cartModel.waypoints.isEmpty) src
      else handleAccelerationControls(src)(cartModel,player,mainHand,cartModel.waypoints.headOption)
+    case _ =>
+      src
 
   }
   def handleAccelerationControls(
@@ -110,20 +146,24 @@ object MinecartController {
     target:Option[Location]
   ) =
     mainHand match {
-      case _ if cartModel.fuel(player.getVehicle.getUniqueId) <= 0 => src
+      case _ if cartModel.fuel.getOrElse(player.getVehicle.getUniqueId,0d) <= 0 =>
+        src
       case Material.FIREWORK_ROCKET =>
+        //player.playSound(player.getLocation,Sound.ENTITY_MINECART_RIDING,SoundCategory.PLAYERS,30,20)
         val newspeed = cartModel.speed + 0.01
         val fuelUsed = 0.1
-        val newfuel = cartModel.fuel ++ Map(player.getVehicle.getUniqueId -> (cartModel.fuel(player.getVehicle.getUniqueId) - fuelUsed))
+        val newfuel = cartModel.fuel.updated(player.getVehicle.getUniqueId ,(cartModel.fuel.getOrElse(player.getVehicle.getUniqueId,0d) - fuelUsed))
         moveCart(player,newspeed,target)
         src ++[SpaceCraftPlayerEvent,MinecartControlModel] cartModel.copy(speed = newspeed, fuel = newfuel)
       case Material.ARROW =>
+        //player.playSound(player.getLocation,Sound.ENTITY_MINECART_RIDING,SoundCategory.PLAYERS,30,10)
         moveCart(player,cartModel.speed,target)
         src
       case Material.IRON_SHOVEL =>
+        //player.playSound(player.getLocation,Sound.ENTITY_MINECART_RIDING,SoundCategory.PLAYERS,30,0)
         val newspeed = math.max(0,cartModel.speed - 0.1)
         val fuelUsed = 0.1
-        val newfuel = cartModel.fuel ++ Map(player.getVehicle.getUniqueId -> (cartModel.fuel(player.getVehicle.getUniqueId) - fuelUsed))
+        val newfuel = cartModel.fuel .updated(player.getVehicle.getUniqueId ,(cartModel.fuel.getOrElse(player.getVehicle.getUniqueId,0d) - fuelUsed))
         moveCart(player,newspeed,target)
         src ++[SpaceCraftPlayerEvent,MinecartControlModel] cartModel.copy(speed = newspeed, fuel = newfuel)
       case _ =>

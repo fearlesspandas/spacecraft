@@ -29,14 +29,13 @@ object Players {
       SpaceCraftPlayer(onlinePlayer,oxygenRemaining)
     }
   }
+
   case class SpaceCraftPlayer(value:Player,oxygenRemaining:Double,postProcessing:() => Unit = (() => ())) extends (SpaceCraftPlayer ==> SpaceCraftPlayer) with produces[Player]{
     override def apply(src: dataset[SpaceCraftPlayer]): dataset[SpaceCraftPlayer] = {
       val currentPlayer = Bukkit.getServer.getPlayer(value.getUniqueId)
       if(currentPlayer == null) DatasetError[SpaceCraftPlayer](new Error("No Player Found")) else this.copy(value = currentPlayer)
     }
-
   }
-
   implicit class SpPlayerGrammar[A<:SpaceCraftPlayer](src:dataset[A])(implicit typeTag: TypeTag[A]){
     def player :dataset[SpaceCraftPlayer] = if(src.isInstanceOf[SpaceCraftPlayer]) {
       val p = src.asInstanceOf[SpaceCraftPlayer]

@@ -35,7 +35,7 @@ object ItemGravityModel {
           val vec = player.getLocation().subtract(i.getLocation())
           val playerVel = player.getVelocity.length()
           val baseScaler =  100
-          val scaler = if(playerVel > 0) playerVel+ (playerVel * 0.10) else -baseScaler*gravityScaler/(dist*dist)
+          val scaler = if(playerVel > 0) -(playerVel+ (playerVel * 0.10)) else -baseScaler*gravityScaler/(dist*dist)
           val currvel = i.getVelocity
           i.setVelocity(currvel.subtract(vec.toVector.normalize().multiply(scaler)))
           i.setCustomName(s"Following ${player.getName}")
@@ -45,5 +45,27 @@ object ItemGravityModel {
       src ++ itemGravEvent.copy(items = livingItems)
     }
 
+  }
+
+  case class AddEntitiesToConvoy(
+                               frequency:Double=1000,
+                               probability:Double = 1,
+                               items:Seq[Entity] = Seq() ,
+                               value:Option[BukkitTask]= None
+                             )  extends SpaceCraftPlayerEvent {
+    override val name:String = "AttachEntities"
+    override def setFrequency(frequency: Double): SpaceCraftPlayerEvent = this.copy(frequency = frequency)
+
+    override def setProbability(probability: Double): SpaceCraftPlayerEvent = this.copy(probability = probability)
+
+    override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
+
+    override def apply(src: dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent]): dataset[SpaceCraftPlayer with SpaceCraftPlayerEvent] =
+      for{
+        task <- src.<--[SpaceCraftPlayerEvent]
+      }yield{
+        val itemstask = task.asInstanceOf[ItemGravityEvent]
+        src ++[SpaceCraftPlayerEvent,ItemGravityEvent] itemstask.copy(items = items ++ itemstask.items)
+      }
   }
 }

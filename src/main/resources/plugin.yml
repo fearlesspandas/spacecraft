@@ -89,3 +89,8 @@ commands:
       usage: /<command>
       permission: spacecraft.removecmd
       permission-message: You don't have <permission>
+    givesiphon:
+      description: sets the probability of a spacecraft event.
+      usage: /<command>
+      permission: spacecraft.givesiphon
+      permission-message: You don't have <permission>

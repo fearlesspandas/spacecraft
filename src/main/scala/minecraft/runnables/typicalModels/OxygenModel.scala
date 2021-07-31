@@ -7,6 +7,7 @@ import Typical.core.grammar._
 import io.circe.generic.JsonCodec
 import minecraft.runnables.typicalModels.PlayerEvents.{MonadicEvent, SpaceCraftPlayerEvent}
 import minecraft.runnables.typicalModels.Players.SpaceCraftPlayer
+import minecraft.utils.OxygenBlockStore
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.{ChatColor, Material}
 
@@ -30,12 +31,14 @@ object OxygenModel {
     override def apply(bukkitTask: BukkitTask): SpaceCraftPlayerEvent = this.copy(value = Some(bukkitTask))
     def apply(player: SpaceCraftPlayer): SpaceCraftPlayer = {
       if (
-        player.isOnline && !player.isOnGround
+        player.isOnline && !OxygenBlockStore.contains(player.getEyeLocation.getBlock)
       ) {
         if (
           player.getInventory.getHelmet != null &&
             player.getInventory.getHelmet.getType == Material.DIAMOND_HELMET
         ) {
+          player.setCustomName(s"oxy${player.oxygenRemaining}")
+          player.setCustomNameVisible(true)
           player match {
             case p if p.isSwimming =>
               val res = player.copy(oxygenRemaining = player.oxygenRemaining + siphonAmt,postProcessing = () => ())
@@ -52,7 +55,7 @@ object OxygenModel {
           }
 
         } else {
-
+          player.setCustomNameVisible(false)
           val postProcess = () => {
             player.value.damage(player.getHealth/2)
           }
@@ -60,7 +63,6 @@ object OxygenModel {
           player.copy(postProcessing = postProcess)
         }
       }else{
-        player.value.sendMessage("nothing to do")
         player.copy(postProcessing = () => ())
       }
     }

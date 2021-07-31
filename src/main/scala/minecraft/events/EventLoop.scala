@@ -8,7 +8,7 @@ import minecraft.runnables.typicalModels.EntitySpawnModel
 import minecraft.runnables.typicalModels.EntitySpawnModel.{BlazeSpawnEvent, DragonSpawnEvent, GhastSpawnEvent, PhantomSpawnEvent}
 import minecraft.runnables.typicalModels.EventManager.EventManager
 import minecraft.runnables.typicalModels.HeightReminder.HeightReminder
-import minecraft.runnables.typicalModels.ItemGravityModel.ItemGravityEvent
+import minecraft.runnables.typicalModels.ItemGravityModel.{AddEntitiesToConvoy, ItemGravityEvent}
 import minecraft.runnables.typicalModels.OxygenModel.OxygenDepletionModel
 import minecraft.runnables.typicalModels.OxygenReplenishEvent.OxygenReplenishEvent
 import minecraft.runnables.typicalModels.PlayerEvents._
@@ -26,11 +26,13 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.{DisplaySlot, Score}
 import org.spigotmc.event.player.PlayerSpawnLocationEvent
 import minecraft.runnables.typicalModels.ListenerModel._
-import minecraft.utils.MinecartController.MinecartControlModel
-import minecraft.utils.{ItemCommands, MinecartController, Surroundings}
+import minecraft.utils.MinecartController.{FuelReplenishModel, MinecartControlModel}
+import minecraft.utils.{ItemCommands, MinecartController, OxygenBlockStore, Surroundings}
+import org.bukkit.block.Chest
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause
 import org.bukkit.event.vehicle.{VehicleDamageEvent, VehicleEnterEvent, VehicleExitEvent}
-import org.bukkit.event.world.ChunkLoadEvent
+import org.bukkit.event.world.{ChunkLoadEvent, StructureGrowEvent}
+import org.bukkit.inventory.{CraftingInventory, ItemStack}
 
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
@@ -46,6 +48,8 @@ object EventLoop {
   val blazeModel = BlazeSpawnEvent(entitySpawnRate,0.07)
   val itemGravityEvent = ItemGravityEvent("ItemGravityEvent1",100,1,2,Seq())
   val itemGravityEvent2 = ItemGravityEvent("ItemGravityEvent2",100,1,2,Seq())
+  val shipFuelModel = FuelReplenishModel()
+  val addEntitiesToConvoy = AddEntitiesToConvoy()
   val minecartController = MinecartControlModel(
     name = "MinecartControlModel",
     frequency = 200,
@@ -93,7 +97,7 @@ object EventLoop {
     TrieMap()
   )
   val entitySpawnTasks = Seq(
-      dragonModel,
+    dragonModel,
     ghastModel,
     phantomModel,
     blazeModel
@@ -124,12 +128,10 @@ object EventLoop {
       val dat = em.getTask(player,model.name)
       //println(s"taskplayer:${datplayer}")
       val oxyremaining = deriveScore(dat)
-
       //println(s"data intact:${if(dat.isEmpty) dat else !dat.isEmpty}")
       objective.getScore(player.getDisplayName).setScore((oxyremaining).floor.toInt)
       em
     }
-
   }
   implicit val serializer:dataset[SpaceCraftPlayerEvent with SpaceCraftPlayer] => Unit = src =>
       //if(event.isInstanceOf[PlayerGravityEvent]) println(s"serialized blocks:${event.asInstanceOf[PlayerGravityEvent].knownBlocks}")
@@ -142,9 +144,6 @@ object EventLoop {
         em.value.update((event.name,player.getUniqueId),src)
         em
       }
-
-
-
 
   class EventLoopListener(plug:JavaPlugin) extends Listener {
     plug.getServer().getPluginManager().registerEvents(this,plug)
@@ -198,8 +197,7 @@ object EventLoop {
         spcPlayer <- em.getTask(player,ievent.name).player
       }yield {
         val gravTask = task.asInstanceOf[ItemGravityEvent]
-        val updatedTask = task.asInstanceOf[ItemGravityEvent].copy(items = event.getItemDrop +: gravTask.items )
-        em.updateEvent(updatedTask,spcPlayer,plug)
+        em.updateEvent(gravTask.copy(items = event.getItemDrop +: gravTask.items),spcPlayer,plug)
       }
       }
     }
@@ -213,25 +211,44 @@ object EventLoop {
           eventManager.updateEvent(oxyModel,spcplayer,plug,oxyReplenishModel)
       }
     }
+//    @EventHandler
+//    def replenishOxygenOnBlockDestroy(event:BlockBreakEvent):Unit = {
+//      val player = event.getPlayer
+//      event.getBlock.getType match {
+//        case m if(m.isFuel) =>
+//          for {
+//            em <- eventManager
+//            spcplayer <- em.value.getOrElse((oxyModel.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
+//          } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
+//        case Material.BLUE_ICE | Material.ICE | Material.FROSTED_ICE =>
+//          for {
+//            em <- eventManager
+//            spcplayer <- em.value.getOrElse((oxyModel.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
+//          } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
+//        case _ => ()
+//      }
+//    }
     @EventHandler
-    def replenishOxygenOnBlockDestroy(event:BlockBreakEvent):Unit = {
-      val player = event.getPlayer
-      event.getBlock.getType match {
-        case m if(m.isFuel) =>
-          for {
-            em <- eventManager
-            spcplayer <- em.value.getOrElse((oxyModel.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
-          } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
-        case Material.BLUE_ICE | Material.ICE | Material.FROSTED_ICE =>
-          for {
-            em <- eventManager
-            spcplayer <- em.value.getOrElse((oxyModel.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
-          } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
-        case _ => ()
+    def itemCommandHandler(event:PlayerInteractEvent):Unit = event.getAction match {
+      case Action.RIGHT_CLICK_BLOCK  => {
+        val item = event.getItem
+        val name = item.getItemMeta.getDisplayName
+        val player = event.getPlayer
+        name match {
+          case "Oxy Siphon" =>
+            event.getClickedBlock.getType match {
+              case Material.BLUE_ICE | Material.ICE | Material.FROSTED_ICE | Material.WATER=>
+                event.getClickedBlock.setType(Material.AIR)
+                for {
+                  em <- eventManager
+                  spcplayer <- em.value.getOrElse((oxyModel.name, player.getUniqueId), throw new Error(s"No OxygenModel found for ${player.getDisplayName}")).player
+                } yield eventManager.updateEvent(oxyModel, spcplayer, plug, oxyReplenishModel)
+              case _ => ()
+            }
+
+          case _ => ()
+        }
       }
-    }
-    @EventHandler
-    def itemCommandHandler(event:PlayerInteractEvent) = event.getAction match {
       case Action.RIGHT_CLICK_AIR if(!event.getPlayer.isInsideVehicle) =>
         val item = event.getItem.getType
         ItemCommands.runCommand(event.getPlayer,item)
@@ -239,7 +256,14 @@ object EventLoop {
       case _ => ()
     }
     @EventHandler
+    def addOxyToSurroundings(event:StructureGrowEvent) : Unit = {
+      event.getPlayer.sendMessage("Growing plant")
+      //OxygenBlockStore.addlocations(Surroundings.getBox(event.getLocation,3):_*)
+
+    }
+    @EventHandler
     def enterMinecart(event:VehicleEnterEvent):Unit = event.getEntered match {
+      case player:Player if(player.getInventory.getItemInMainHand.getType == Material.COAL_BLOCK) => event.setCancelled(true)
       case player: Player =>
         for {
           spcplayer <- eventManager.getTask(player,minecartController.name).player
@@ -248,7 +272,7 @@ object EventLoop {
           val mctask = task.asInstanceOf[MinecartControlModel]
           val inventory = player.getInventory.getContents
           MinecartController.setInventoryControls(player)
-          eventManager.updateEvent(mctask.copy(inventorySnapshot = inventory),spcplayer,plug)
+          eventManager.updateEvent(mctask.copy(inventorySnapshot = inventory,probability = 1),spcplayer,plug)
         }
       case _ => ()
     }
@@ -278,8 +302,8 @@ object EventLoop {
             spcPlayer <- em.getTask(player,ievent.name).player
           }yield {
             val gravTask = task.asInstanceOf[ItemGravityEvent]
-            val updatedTask = task.asInstanceOf[ItemGravityEvent].copy(items = v +: gravTask.items )
-            em.updateEvent(updatedTask,spcPlayer,plug)
+            //val updatedTask = task.asInstanceOf[ItemGravityEvent].copy(items = v +: gravTask.items )
+            em.updateEvent(gravTask,spcPlayer,plug,addEntitiesToConvoy.copy(items = v +: gravTask.items))
           }
     }
     }
@@ -290,18 +314,25 @@ object EventLoop {
         case v:Vehicle =>
           player.getInventory.getItemInMainHand.getType match {
             case Material.COAL_BLOCK =>
-              val updatedInv = player.getInventory.getItemInMainHand
-              updatedInv.setAmount(1)
-              player.getInventory.remove(updatedInv)
+              val coalstack = player.getInventory.getContents.collectFirst({case i if i != null && i.getType == Material.COAL_BLOCK => i}).get
+              val newcontents = player.getInventory.getContents.collect({
+                case i if (i != null & i == coalstack) => {
+                  i.setAmount(i.getAmount - 1)
+                  i
+                  }
+                case i => i
+              })
+              player.getInventory.setContents(newcontents)
               for {
                 spcplayer <- eventManager.getTask(player,minecartController.name).player
                 task <- eventManager.getTask(player,minecartController.name).<--[SpaceCraftPlayerEvent]
               }yield {
                 val mctask = task.asInstanceOf[MinecartControlModel]
-                eventManager.updateEvent(mctask.addFuel(v,100),spcplayer,plug)
+                eventManager.updateEvent(mctask.copy(fuel = mctask.fuel.updated(v.getUniqueId , mctask.fuel.getOrElse(v.getUniqueId,0d) + 10) ),spcplayer,plug)
               }
-          }
 
+            case _ => ()
+          }
       }
     }
     //every time a chunk loads all nearby players will be potentially affected

@@ -11,6 +11,7 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scoreboard.DisplaySlot
 import PlayerCommandProcessor._
+import minecraft.runnables.typicalModels.SpaceCrafting.OxySiphonRecipe
 
 import scala.collection.JavaConverters._
 class SpaceCraft extends JavaPlugin{
@@ -25,6 +26,7 @@ class SpaceCraft extends JavaPlugin{
 		val objective = if(maybeObjective == null) scoreboard.registerNewObjective(s"${Vitals.name}","dummy",s"${Vitals}") else maybeObjective
 		objective.setDisplaySlot(DisplaySlot.SIDEBAR)
 		new ScoreboardTask().runTaskTimer(this,0,3)
+		Bukkit.getServer.addRecipe(OxySiphonRecipe(this))
 	}
 	override def onDisable() {
 		getLogger().info("Shutting down SpaceCraft");

@@ -15,6 +15,7 @@ import minecraft.runnables.typicalModels.PlayerEvents.SpaceCraftPlayerEvent
 import minecraft.runnables.typicalModels.PlayerGravityModel.PlayerGravityEvent
 import minecraft.utils.ItemCommands
 import minecraft.utils.MinecartController.MinecartControlModel
+import org.bukkit.inventory.ItemStack
 import org.bukkit.{Bukkit, Location, Material}
 
 import scala.collection.JavaConverters._
@@ -90,9 +91,17 @@ object PlayerCommandProcessor{
         showWaypoints(sender)
       case "clearwaypoints" =>
         clearWaypoints(sender)
+      case "givesiphon" =>
+        giveOxySiphon(sender)
+        eventManager
       case cmd => sender.sendMessage(s"No command found for ${cmd}")
         eventManager
-
+    }
+    def giveOxySiphon(player:Player):Unit = {
+      val siphon = new ItemStack(Material.BLAZE_ROD,1)
+      val meta = siphon.getItemMeta
+      meta.setDisplayName("Oxy Siphon")
+      if(siphon.setItemMeta(meta)) player.getInventory.addItem(siphon)
     }
     def clearWaypoints(player:Player):dataset[EventManager] = for{
       spcplayer <- eventManager.getTask(player,minecartController.name).player

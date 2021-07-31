@@ -23,7 +23,7 @@ object EventManager {
     def updateEvent(event:SpaceCraftPlayerEvent,player:SpaceCraftPlayer,plug:JavaPlugin,via:SpaceCraftPlayerEvent = NoEvent):dataset[A] = for{
       eventManager <- src.eventManager
     }yield {
-      val updatedEventTask  =
+      //update or start task from current state
         eventManager
           .value
           .getOrElse(
@@ -35,16 +35,9 @@ object EventManager {
           )
           .updateEvent(event,plug,via)
       println("event updated in event manager")
-       //eventManager.update((event.name,player.getUniqueId),updatedEventTask)
-      for{
-        taskplayer <- updatedEventTask.player
-      }yield{
-        player
-      }
-      println(s"isEmpty:${eventManager.isEmpty}")
-      println("task updated")
+       //don't need to explicitly updte event manager because the serialize/deserialize methods within ListenerModel
+      //handle this while the task is running
       val res = if(src.isInstanceOf[EventManager]) eventManager.asInstanceOf[dataset[A]] else src ++ eventManager
-      println("newEvent manager crated")
       println(s"newmanager isemtpy:${res.isEmpty}")
       res
     }
